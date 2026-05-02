@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle, SystemChrome, SystemUiMode;
+import 'package:flutter/services.dart'
+    show
+        KeyEvent,
+        KeyUpEvent,
+        LogicalKeyboardKey,
+        rootBundle,
+        SystemChrome,
+        SystemUiMode;
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
@@ -29,15 +36,44 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  late final Future<WebViewController> _controllerFuture = _buildController();
+  late final WebViewController _controller;
+  bool _ready = false;
 
-  Future<WebViewController> _buildController() async {
-    final html = await rootBundle.loadString('assets/RoadRacerGame.html');
-    final controller = WebViewController()
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0A0A1A))
-      ..loadHtmlString(html, baseUrl: 'about:blank');
-    return controller;
+      ..setBackgroundColor(const Color(0xFF0A0A1A));
+    _loadGame();
+  }
+
+  Future<void> _loadGame() async {
+    final html = await rootBundle.loadString('assets/RoadRacerGame.html');
+    await _controller.loadHtmlString(html, baseUrl: 'about:blank');
+    if (mounted) setState(() => _ready = true);
+  }
+
+  // Flutter's default focus traversal swallows arrow keys before they reach
+  // WKWebView, so the in-page JS never sees them. Forward arrow keys to the
+  // WebView as synthetic KeyboardEvents so the game's existing handlers fire.
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    final keyName = _arrowKeyName(event.logicalKey);
+    if (keyName == null) return KeyEventResult.ignored;
+    final type = event is KeyUpEvent ? 'keyup' : 'keydown';
+    _controller.runJavaScript(
+      "document.dispatchEvent(new KeyboardEvent('$type', "
+      "{key: '$keyName', bubbles: true}));",
+    );
+    return KeyEventResult.handled;
+  }
+
+  static String? _arrowKeyName(LogicalKeyboardKey key) {
+    if (key == LogicalKeyboardKey.arrowUp) return 'ArrowUp';
+    if (key == LogicalKeyboardKey.arrowDown) return 'ArrowDown';
+    if (key == LogicalKeyboardKey.arrowLeft) return 'ArrowLeft';
+    if (key == LogicalKeyboardKey.arrowRight) return 'ArrowRight';
+    return null;
   }
 
   @override
@@ -45,17 +81,15 @@ class _GameScreenState extends State<GameScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A1A),
       body: SafeArea(
-        child: FutureBuilder<WebViewController>(
-          future: _controllerFuture,
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(
+        child: !_ready
+            ? const Center(
                 child: CircularProgressIndicator(color: Colors.white70),
-              );
-            }
-            return WebViewWidget(controller: snapshot.data!);
-          },
-        ),
+              )
+            : Focus(
+                autofocus: true,
+                onKeyEvent: _onKeyEvent,
+                child: WebViewWidget(controller: _controller),
+              ),
       ),
     );
   }
