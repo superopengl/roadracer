@@ -8,10 +8,10 @@ Road Racer — a top-down browser game. This is a vibe coding craft by Leo, a 10
 
 The repo has two targets that share one source of truth:
 
-1. **The game itself** — `Roadracer.html` at the repo root. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build system, no package manager, no test suite, no external dependencies. Run it with `./dev.sh` (see below).
+1. **The game itself** — `Roadracer.html` at the repo root. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build step, no runtime JS dependencies. The only tooling is a static dev server (`pnpm dev`); see "Running the browser game" below.
 2. **iOS app wrapper** — `mobile/`, a Flutter 3 + `webview_flutter` project that bundles the same HTML as an asset and renders it fullscreen in WKWebView. iOS only.
 
-Keep this in mind when proposing changes: prefer small, readable edits over refactors or new abstractions in the game itself, and don't introduce tooling (bundlers, frameworks, lint configs, test harnesses) on the HTML side unless asked. The Flutter project is a thin shell — don't grow it beyond the WebView wrapper without a specific reason.
+Keep this in mind when proposing changes: prefer small, readable edits over refactors or new abstractions in the game itself, and don't introduce runtime tooling (bundlers, frameworks, transpilers) on the HTML side unless asked — the game must stay loadable as a single file. The Flutter project is a thin shell; don't grow it beyond the WebView wrapper without a specific reason.
 
 ## Running the browser game
 
