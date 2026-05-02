@@ -47,6 +47,16 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+# Flutter 3.41.x stable pins these transitive deps to versions older than
+# what's on pub.dev. Override to silence the "newer versions available"
+# notices and pull in the latest patch/minor releases. Drop these once a
+# future Flutter release relaxes the SDK constraint.
+dependency_overrides:
+  matcher: ^0.12.20
+  meta: ^1.18.2
+  test_api: ^0.7.12
+  vector_math: ^2.3.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
