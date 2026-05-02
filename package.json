@@ -12,7 +12,7 @@
     "dev": "serve --listen ${PORT:-8000} --no-clipboard mobile/assets",
     "mobile:install": "cd mobile && flutter pub get",
     "mobile:analyze": "cd mobile && flutter analyze",
-    "mobile:run": "cd mobile && flutter run",
+    "mobile:run": "cd mobile && flutter run -d \"iPhone 17 Pro\"",
     "mobile:build:ios": "cd mobile && flutter build ios --release --no-codesign",
     "mobile:build:ipa": "cd mobile && flutter build ipa",
     "mobile:pods": "cd mobile/ios && pod install"
