@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "serve --listen ${PORT:-8000} --no-clipboard ."
+    "dev": "serve --listen ${PORT:-8000} --no-clipboard mobile/assets"
   },
   "devDependencies": {
     "serve": "^14.2.4"

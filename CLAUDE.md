@@ -8,8 +8,10 @@ Road Racer — a top-down browser game. This is a vibe coding craft by Leo, a 10
 
 The repo has two targets that share one source of truth:
 
-1. **The game itself** — `Roadracer.html` at the repo root. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build step, no runtime JS dependencies. The only tooling is a static dev server (`pnpm dev`); see "Running the browser game" below.
-2. **iOS app wrapper** — `mobile/`, a Flutter 3 + `webview_flutter` project that bundles the same HTML as an asset and renders it fullscreen in WKWebView. iOS only.
+1. **The game itself** — `mobile/assets/Roadracer.html`. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build step, no runtime JS dependencies. The only tooling is a static dev server (`pnpm dev`); see "Running the browser game" below.
+2. **iOS app wrapper** — `mobile/`, a Flutter 3 + `webview_flutter` project that loads `assets/Roadracer.html` (relative to the Flutter project) and renders it fullscreen in WKWebView. iOS only.
+
+The HTML lives inside `mobile/assets/` rather than at the repo root because that's Flutter's native asset path — the iOS app picks it up directly via `pubspec.yaml`, no symlink or copy step. The web dev server (`pnpm dev`) treats the same directory as its docroot, so editing one file updates both targets.
 
 Keep this in mind when proposing changes: prefer small, readable edits over refactors or new abstractions in the game itself, and don't introduce runtime tooling (bundlers, frameworks, transpilers) on the HTML side unless asked — the game must stay loadable as a single file. The Flutter project is a thin shell; don't grow it beyond the WebView wrapper without a specific reason.
 
@@ -24,13 +26,13 @@ pnpm dev           # serves http://localhost:8000/Roadracer.html
 PORT=9000 pnpm dev # override the port
 ```
 
-`pnpm dev` runs `serve --listen ${PORT:-8000} --no-clipboard .`. `serve.json` sits next to `package.json` and (a) disables `serve`'s default clean-URL rewriting so `/Roadracer.html` resolves directly instead of redirecting to `/Roadracer`, and (b) 301-redirects `/` to `/Roadracer.html` so the bare host URL just works.
+`pnpm dev` runs `serve --listen ${PORT:-8000} --no-clipboard mobile/assets`. `mobile/assets/serve.json` lives next to the HTML and (a) disables `serve`'s default clean-URL rewriting so `/Roadracer.html` resolves directly instead of redirecting to `/Roadracer`, and (b) 301-redirects `/` to `/Roadracer.html` so the bare host URL just works.
 
 The HTML itself embeds a small auto-reload script (bottom of the file) that polls the page URL every second and triggers `location.reload()` when the bytes change — so editing and saving is the dev loop, no rebuild needed. Auto-reload only works when the file is served over HTTP; opening via `file://` will silently fail the polling fetch.
 
 ## Architecture
 
-Everything lives in the inline `<script>` near the top of `Roadracer.html` (roughly lines 41–2381). The structure to know:
+Everything lives in the inline `<script>` near the top of `mobile/assets/Roadracer.html` (roughly lines 41–2381). The structure to know:
 
 - **Game state is a flat set of module-level `let`s.** `showingTitleScreen`, `showingLevelSelect`, `currentLevel`, `paused`, `won`, `gameOver`, `resetting`, `crashFrozen`, `showHelp`, plus the `car` object, `obstacles[]` array, `explosionParticles[]`, `damagePopups[]`, etc. There is no scene/state-machine abstraction — code branches on these flags inline. When adding a new screen or mode, follow the same pattern (a new `showingX` flag plus explicit checks in input handler and `gameLoop`).
 
@@ -50,10 +52,10 @@ Everything lives in the inline `<script>` near the top of `Roadracer.html` (roug
 
 ## iOS app wrapper (`mobile/`)
 
-Flutter 3 + `webview_flutter ^4.13` that wraps `Roadracer.html` in a fullscreen `WebView`. iOS only — no Android directory was generated, so don't run `flutter create --platforms=android` here without intent.
+Flutter 3 + `webview_flutter ^4.13` that wraps `mobile/assets/Roadracer.html` in a fullscreen `WebView`. iOS only — no Android directory was generated, so don't run `flutter create --platforms=android` here without intent.
 
-- **Single source of truth**: the HTML is bundled via a symlink at `mobile/assets/Roadracer.html` → `../../Roadracer.html`. Edit only the file at the repo root; the Flutter build follows the symlink. Don't replace the symlink with a copy.
-- **Entry point**: `mobile/lib/main.dart` reads the asset with `rootBundle.loadString` and hands it to `WebViewController.loadHtmlString` with `baseUrl: 'about:blank'`. The HTML's dev auto-reloader (`fetch(location.href)`) silently fails inside WKWebView, which is fine — auto-reload is a desktop-dev convenience, not a mobile feature.
+- **Asset path**: `mobile/assets/Roadracer.html` is declared in `mobile/pubspec.yaml` as `assets/Roadracer.html` (relative to the Flutter project) and is the canonical location for the HTML. It's a real file, not a symlink — the web dev server treats this same directory as its docroot, so the two targets share the file naturally.
+- **Entry point**: `mobile/lib/main.dart` reads the asset with `rootBundle.loadString('assets/Roadracer.html')` and hands it to `WebViewController.loadHtmlString` with `baseUrl: 'about:blank'`. The HTML's dev auto-reloader (`fetch(location.href)`) silently fails inside WKWebView, which is fine — auto-reload is a desktop-dev convenience, not a mobile feature.
 - **iOS config**: bundle id `com.leo.roadracer.roadracer`, display name "Road Racer", deployment target 13.0 (pinned in `mobile/ios/Podfile`, required by `webview_flutter_wkwebview`). Org prefix is `com.leo.roadracer`.
 - **No widget tests**: the scaffolded `test/widget_test.dart` was removed because the WebView wrapper isn't worth a smoke test. Don't recreate it without a real test to put there.
 

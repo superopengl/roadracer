@@ -2,7 +2,9 @@
 
 A vibe coding craft by Leo, a 10 year old boy.
 
-Road Racer is a top-down browser game written as a single self-contained HTML file (`Roadracer.html`) — pure HTML/CSS/vanilla JS on an HTML5 `<canvas>`, no build step, no dependencies. The same HTML is also wrapped in a Flutter iOS app (`mobile/`) so the game can ship as an iPhone app.
+Road Racer is a top-down browser game written as a single self-contained HTML file — pure HTML/CSS/vanilla JS on an HTML5 `<canvas>`, no build step, no dependencies. The same HTML is also wrapped in a Flutter iOS app (`mobile/`) so the game can ship as an iPhone app.
+
+The game lives at `mobile/assets/Roadracer.html`. That's both Flutter's native asset path (so the iOS app picks it up with no symlink or copy step) and the docroot for the local web dev server, so the same file powers both targets.
 
 ## Tech stack
 
@@ -33,15 +35,18 @@ flutter build ios --release --no-codesign # release build (no signing)
 flutter build ipa                         # signed .ipa for distribution
 ```
 
-The Flutter project bundles `Roadracer.html` via a symlink at `mobile/assets/Roadracer.html` → `../../Roadracer.html`, so the HTML stays the single source of truth — edit the file at the repo root and both targets pick it up.
+The Flutter project picks up `mobile/assets/Roadracer.html` natively via `pubspec.yaml`'s `assets:` declaration — no symlink, no copy step. Edit that one file and both the browser and iOS targets pick it up.
 
 ## Repo layout
 
 ```
-Roadracer.html   the game (everything is in here)
-package.json     pnpm scripts (`pnpm dev`)
-serve.json       `serve` config (disables clean URLs, redirects / → Roadracer.html)
-.nvmrc           Node 24
-mobile/          Flutter iOS app wrapper
+mobile/
+  assets/
+    Roadracer.html   the game (single source of truth)
+    serve.json       `serve` config (disables clean URLs, redirects / → Roadracer.html)
+  lib/main.dart      Flutter WebView wrapper
+  ios/               iOS-only platform project
+package.json         pnpm scripts (`pnpm dev`)
+.nvmrc               Node 24
 LICENSE
 ```
