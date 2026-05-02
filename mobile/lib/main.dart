@@ -32,7 +32,7 @@ class _GameScreenState extends State<GameScreen> {
   late final Future<WebViewController> _controllerFuture = _buildController();
 
   Future<WebViewController> _buildController() async {
-    final html = await rootBundle.loadString('assets/Roadracer.html');
+    final html = await rootBundle.loadString('assets/RoadRacerGame.html');
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF0A0A1A))

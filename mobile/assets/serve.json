@@ -2,6 +2,6 @@
   "cleanUrls": false,
   "trailingSlash": false,
   "redirects": [
-    { "source": "/", "destination": "/Roadracer.html" }
+    { "source": "/", "destination": "/RoadRacerGame.html" }
   ]
 }
