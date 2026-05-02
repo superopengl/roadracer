@@ -7,15 +7,19 @@ Road Racer is a top-down browser game written as a single self-contained HTML fi
 ## Tech stack
 
 - **Game**: HTML5 + vanilla JavaScript + `<canvas>` 2D context. Single file: `Roadracer.html`.
-- **Dev server**: `python3 -m http.server` via `dev.sh`. The HTML embeds a 1-second polling auto-reloader, so saving the file refreshes the open tab automatically.
+- **Tooling**: Node 24 via [nvm](https://github.com/nvm-sh/nvm) (`.nvmrc`), [pnpm](https://pnpm.io/) as the package manager, [`serve`](https://www.npmjs.com/package/serve) as the static dev server.
 - **iOS app**: Flutter 3 + `webview_flutter` (WKWebView) wrapping the same HTML as a bundled asset. iOS-only; no Android target.
 
 ## Run the game in a browser
 
 ```sh
-./dev.sh           # serves http://localhost:8000/Roadracer.html
-PORT=9000 ./dev.sh # override the port
+nvm use            # picks Node 24 from .nvmrc
+pnpm install
+pnpm dev           # serves http://localhost:8000/Roadracer.html
+PORT=9000 pnpm dev # override the port
 ```
+
+Open `http://localhost:8000/` (redirects to `Roadracer.html`). The HTML embeds a 1-second polling auto-reloader, so saving the file refreshes the open tab automatically — no rebuild step.
 
 ## Run the iOS app
 
@@ -35,7 +39,9 @@ The Flutter project bundles `Roadracer.html` via a symlink at `mobile/assets/Roa
 
 ```
 Roadracer.html   the game (everything is in here)
-dev.sh           local dev server
+package.json     pnpm scripts (`pnpm dev`)
+serve.json       `serve` config (disables clean URLs, redirects / → Roadracer.html)
+.nvmrc           Node 24
 mobile/          Flutter iOS app wrapper
 LICENSE
 ```

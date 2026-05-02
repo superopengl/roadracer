@@ -15,14 +15,18 @@ Keep this in mind when proposing changes: prefer small, readable edits over refa
 
 ## Running the browser game
 
+Toolchain: Node 24 (pinned in `.nvmrc`), pnpm (declared via `packageManager` in `package.json`), `serve` for static hosting.
+
 ```sh
-./dev.sh           # serves on http://localhost:8000/Roadracer.html and opens the browser
-PORT=9000 ./dev.sh # override the port
+nvm use            # picks Node 24 from .nvmrc
+pnpm install       # one-time, installs `serve`
+pnpm dev           # serves http://localhost:8000/Roadracer.html
+PORT=9000 pnpm dev # override the port
 ```
 
-The script just runs `python3 -m http.server`. The HTML itself embeds a small auto-reload script (bottom of the file) that polls the page URL every second and triggers `location.reload()` when the bytes change — so editing and saving is the dev loop, no rebuild needed.
+`pnpm dev` runs `serve --listen ${PORT:-8000} --no-clipboard .`. `serve.json` sits next to `package.json` and (a) disables `serve`'s default clean-URL rewriting so `/Roadracer.html` resolves directly instead of redirecting to `/Roadracer`, and (b) 301-redirects `/` to `/Roadracer.html` so the bare host URL just works.
 
-Auto-reload only works when the file is served over HTTP. Opening via `file://` will silently fail the polling fetch, and you'll need to refresh manually.
+The HTML itself embeds a small auto-reload script (bottom of the file) that polls the page URL every second and triggers `location.reload()` when the bytes change — so editing and saving is the dev loop, no rebuild needed. Auto-reload only works when the file is served over HTTP; opening via `file://` will silently fail the polling fetch.
 
 ## Architecture
 
