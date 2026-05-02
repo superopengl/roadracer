@@ -1,0 +1,2 @@
+- [Git identity for roadracer repo](git_identity.md) — commits here must use Jun Shao <mr.shaojun@gmail.com>, not the global one.
+- [Roadracer dev setup preferences](dev_setup.md) — user runs iPhone 17 Pro sim, prefers pnpm wrappers over raw flutter commands
