@@ -59,16 +59,20 @@ Flutter 3 + `webview_flutter ^4.13` that wraps `mobile/assets/RoadRacerGame.html
 - **iOS config**: bundle id `com.leo.roadracer.roadracer`, display name "Road Racer", deployment target 13.0 (pinned in `mobile/ios/Podfile`, required by `webview_flutter_wkwebview`). Org prefix is `com.leo.roadracer`.
 - **No widget tests**: the scaffolded `test/widget_test.dart` was removed because the WebView wrapper isn't worth a smoke test. Don't recreate it without a real test to put there.
 
+Flutter commands are wrapped as `pnpm mobile:*` scripts at the repo root, so you don't need to remember the Flutter CLI or `cd mobile`:
+
 ```sh
-cd mobile
-flutter pub get
-flutter analyze                           # should report no issues
-flutter run                               # debug on connected iPhone or simulator
-flutter build ios --release --no-codesign # release build (no signing)
-flutter build ipa                         # signed .ipa for distribution
+pnpm mobile:install     # flutter pub get
+pnpm mobile:analyze     # flutter analyze — should report no issues
+pnpm mobile:run         # flutter run — debug on connected iPhone or simulator
+pnpm mobile:build:ios   # flutter build ios --release --no-codesign
+pnpm mobile:build:ipa   # flutter build ipa — signed .ipa for distribution
+pnpm mobile:pods        # cd mobile/ios && pod install
 ```
 
-If Xcode complains about missing pods after pulling new packages: `cd mobile/ios && pod install`. The CocoaPods warning about `Pods-Runner.profile.xcconfig` not being a base config is cosmetic — Flutter's Profile build picks up Release pod settings via `Flutter/Release.xcconfig`.
+Forward extra args after `--`, e.g. `pnpm mobile:run -- -d <device-id>`.
+
+If Xcode complains about missing pods after pulling new packages, run `pnpm mobile:pods`. The CocoaPods warning about `Pods-Runner.profile.xcconfig` not being a base config is cosmetic — Flutter's Profile build picks up Release pod settings via `Flutter/Release.xcconfig`.
 
 ## Conventions
 
