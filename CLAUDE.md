@@ -4,11 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Road Racer — a top-down browser game. This is a vibe coding craft by Leo, a 10 year old boy. The entire game is one self-contained HTML file: `Roadracer.html`. There is no build system, no package manager, no test suite, and no external dependencies — pure HTML/CSS/vanilla JS using a `<canvas>` 2D context.
+Road Racer — a top-down browser game. This is a vibe coding craft by Leo, a 10 year old boy.
 
-Keep this context in mind when proposing changes: prefer small, readable edits over refactors or new abstractions, and don't introduce tooling (bundlers, frameworks, lint configs, test harnesses) unless asked.
+The repo has two targets that share one source of truth:
 
-## Running it
+1. **The game itself** — `Roadracer.html` at the repo root. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build system, no package manager, no test suite, no external dependencies. Run it with `./dev.sh` (see below).
+2. **iOS app wrapper** — `mobile/`, a Flutter 3 + `webview_flutter` project that bundles the same HTML as an asset and renders it fullscreen in WKWebView. iOS only.
+
+Keep this in mind when proposing changes: prefer small, readable edits over refactors or new abstractions in the game itself, and don't introduce tooling (bundlers, frameworks, lint configs, test harnesses) on the HTML side unless asked. The Flutter project is a thin shell — don't grow it beyond the WebView wrapper without a specific reason.
+
+## Running the browser game
 
 ```sh
 ./dev.sh           # serves on http://localhost:8000/Roadracer.html and opens the browser
@@ -38,6 +43,26 @@ Everything lives in the inline `<script>` near the top of `Roadracer.html` (roug
 - **Level-select navigation uses a `focusTarget` (0–4)** to move focus across regions on the level-select screen: levels row, shop category tabs, shop items, garage category tabs, garage items. Arrow keys' behavior depends on `focusTarget`. Keep this in mind before adding new arrow-key bindings on that screen.
 
 - **No persistence.** Tokens, owned items, and selected cosmetics reset on page reload. If adding save state, `localStorage` is the natural fit; nothing currently reads or writes it.
+
+## iOS app wrapper (`mobile/`)
+
+Flutter 3 + `webview_flutter ^4.13` that wraps `Roadracer.html` in a fullscreen `WebView`. iOS only — no Android directory was generated, so don't run `flutter create --platforms=android` here without intent.
+
+- **Single source of truth**: the HTML is bundled via a symlink at `mobile/assets/Roadracer.html` → `../../Roadracer.html`. Edit only the file at the repo root; the Flutter build follows the symlink. Don't replace the symlink with a copy.
+- **Entry point**: `mobile/lib/main.dart` reads the asset with `rootBundle.loadString` and hands it to `WebViewController.loadHtmlString` with `baseUrl: 'about:blank'`. The HTML's dev auto-reloader (`fetch(location.href)`) silently fails inside WKWebView, which is fine — auto-reload is a desktop-dev convenience, not a mobile feature.
+- **iOS config**: bundle id `com.leo.roadracer.roadracer`, display name "Road Racer", deployment target 13.0 (pinned in `mobile/ios/Podfile`, required by `webview_flutter_wkwebview`). Org prefix is `com.leo.roadracer`.
+- **No widget tests**: the scaffolded `test/widget_test.dart` was removed because the WebView wrapper isn't worth a smoke test. Don't recreate it without a real test to put there.
+
+```sh
+cd mobile
+flutter pub get
+flutter analyze                           # should report no issues
+flutter run                               # debug on connected iPhone or simulator
+flutter build ios --release --no-codesign # release build (no signing)
+flutter build ipa                         # signed .ipa for distribution
+```
+
+If Xcode complains about missing pods after pulling new packages: `cd mobile/ios && pod install`. The CocoaPods warning about `Pods-Runner.profile.xcconfig` not being a base config is cosmetic — Flutter's Profile build picks up Release pod settings via `Flutter/Release.xcconfig`.
 
 ## Conventions
 
