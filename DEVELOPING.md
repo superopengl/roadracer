@@ -1,0 +1,32 @@
+# Developing
+
+## Tech stack
+
+- **Game**: HTML5 + vanilla JavaScript + `<canvas>` 2D context. Single file: `RoadRacerGame.html`.
+- **Tooling**: Node 24 via [nvm](https://github.com/nvm-sh/nvm) (`.nvmrc`), [pnpm](https://pnpm.io/) as the package manager, [`serve`](https://www.npmjs.com/package/serve) as the static dev server.
+- **iOS app**: Flutter 3 + `webview_flutter` (WKWebView) wrapping the same HTML as a bundled asset. iOS-only; no Android target.
+
+## Run the game in a browser
+
+```sh
+nvm use            # picks Node 24 from .nvmrc
+pnpm install
+pnpm dev           # serves http://localhost:8000/RoadRacerGame.html
+PORT=9000 pnpm dev # override the port
+```
+
+Open `http://localhost:8000/` (redirects to `RoadRacerGame.html`). The HTML embeds a 1-second polling auto-reloader, so saving the file refreshes the open tab automatically — no rebuild step.
+
+## Run the iOS app
+
+Requires Flutter 3.x, Xcode, and CocoaPods installed.
+
+```sh
+cd mobile
+flutter pub get
+flutter run                               # debug build on a connected iPhone or simulator
+flutter build ios --release --no-codesign # release build (no signing)
+flutter build ipa                         # signed .ipa for distribution
+```
+
+The Flutter project picks up `mobile/assets/RoadRacerGame.html` natively via `pubspec.yaml`'s `assets:` declaration — no symlink, no copy step. Edit that one file and both the browser and iOS targets pick it up.
