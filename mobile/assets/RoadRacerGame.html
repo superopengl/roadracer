@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Road Racer</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -40,17 +42,25 @@
       font-weight: 700;
       letter-spacing: 0.5px;
       color: white;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.22);
-      border-radius: 8px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 14px;
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      box-shadow:
+        0 6px 18px rgba(0,0,0,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.25);
       touch-action: manipulation;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
     .controls button:active,
     .controls button.pressed {
-      background: rgba(255,107,53,0.35);
-      border-color: #ff6b35;
+      background: rgba(255,107,53,0.42);
+      border-color: rgba(255,107,53,0.85);
+      box-shadow:
+        0 2px 8px rgba(255,107,53,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.3);
     }
     .joystick {
       display: flex;
@@ -62,8 +72,14 @@
       width: 440px;
       height: 440px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.06);
-      border: 2px solid rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.10);
+      border: 2px solid rgba(255,255,255,0.28);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      box-shadow:
+        0 12px 40px rgba(0,0,0,0.35),
+        inset 0 2px 0 rgba(255,255,255,0.18),
+        inset 0 -2px 0 rgba(0,0,0,0.25);
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
       cursor: grab;
@@ -77,8 +93,19 @@
       height: 180px;
       margin: -90px 0 0 -90px;
       border-radius: 50%;
-      background: rgba(255,107,53,0.7);
-      border: 2px solid rgba(255,255,255,0.45);
+      background: radial-gradient(
+        circle at 35% 30%,
+        rgba(255,180,140,0.85),
+        rgba(255,107,53,0.55) 60%,
+        rgba(255,107,53,0.45)
+      );
+      border: 2px solid rgba(255,255,255,0.55);
+      backdrop-filter: blur(10px) saturate(160%);
+      -webkit-backdrop-filter: blur(10px) saturate(160%);
+      box-shadow:
+        0 8px 24px rgba(255,107,53,0.45),
+        inset 0 2px 6px rgba(255,255,255,0.4),
+        inset 0 -3px 8px rgba(0,0,0,0.2);
       pointer-events: none;
       transition: transform 0.12s ease-out;
       will-change: transform;
