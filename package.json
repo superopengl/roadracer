@@ -13,6 +13,7 @@
     "mobile:install": "cd mobile && flutter pub get",
     "mobile:analyze": "cd mobile && flutter analyze",
     "mobile:run": "cd mobile && flutter run -d \"iPhone 17 Pro\"",
+    "mobile:physical": "cd mobile && flutter run -d \"Jun 13\"",
     "mobile:build:ios": "cd mobile && flutter build ios --release --no-codesign",
     "mobile:build:ipa": "cd mobile && flutter build ipa",
     "mobile:pods": "cd mobile/ios && pod install"
