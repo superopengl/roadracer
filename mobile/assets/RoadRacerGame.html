@@ -10,7 +10,7 @@
       overflow: hidden;
     }
     body {
-      --game-size: min(100vw, calc(100vh - 220px));
+      --game-size: min(100vw, calc(100vh - 420px));
       background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
       color: white;
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -29,7 +29,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 18px;
+      gap: 48px;
       padding: 10px 0 14px;
       width: var(--game-size);
       user-select: none;
@@ -74,13 +74,13 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 8px;
+      gap: 16px;
     }
     .actions button {
-      font-size: 13px;
-      padding: 0 10px;
-      min-width: 40px;
-      height: 36px;
+      font-size: 46px;
+      padding: 0 20px;
+      min-width: 100px;
+      height: 102px;
     }
     @media (hover: hover) and (pointer: fine) {
       body { --game-size: 100vmin; }
@@ -94,8 +94,6 @@
 
 <div class="controls">
   <div class="actions">
-    <button data-key=" ">SPACE</button>
-    <button data-key="Enter">ENTER</button>
     <button data-key="Escape">ESC</button>
     <button data-key="p">P</button>
     <button data-key="r">R</button>
@@ -104,6 +102,10 @@
     <button data-key="y">Y</button>
     <button data-key="n">N</button>
     <button data-key="u">U</button>
+  </div>
+  <div class="actions">
+    <button data-key=" ">SPACE</button>
+    <button data-key="Enter">ENTER</button>
   </div>
   <div class="dpad">
     <button class="up"    data-key="ArrowUp">↑</button>
