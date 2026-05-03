@@ -1,0 +1,12 @@
+Road Racer 2026 is a simple, fast top-down arcade racer made by Leo, age 10.
+
+Drive through five levels of escalating chaos — from Rookie to Impossible. Dodge cars, trucks, ambulances, police, UFOs, pedestrians, dogs, and even kangaroos. Crash too many times and you're done.
+
+Earn tokens to buy paint colors, glow effects, brighter headlights, and turbo engines. Mix and match your ride in the garage between runs.
+
+• Five hand-tuned difficulty levels
+• Touch joystick + on-screen action buttons
+• Shop & garage to customize your car
+• No accounts, no ads, no data collection — just drive
+
+Built with HTML5 Canvas. Vibe-coded by a 10-year-old. Have fun.

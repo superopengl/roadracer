@@ -56,7 +56,7 @@ Flutter 3 + `webview_flutter ^4.13` that wraps `mobile/assets/RoadRacerGame.html
 
 - **Asset path**: `mobile/assets/RoadRacerGame.html` is declared in `mobile/pubspec.yaml` as `assets/RoadRacerGame.html` (relative to the Flutter project) and is the canonical location for the HTML. It's a real file, not a symlink — the web dev server treats this same directory as its docroot, so the two targets share the file naturally.
 - **Entry point**: `mobile/lib/main.dart` reads the asset with `rootBundle.loadString('assets/RoadRacerGame.html')` and hands it to `WebViewController.loadHtmlString` with `baseUrl: 'about:blank'`. The HTML's dev auto-reloader (`fetch(location.href)`) silently fails inside WKWebView, which is fine — auto-reload is a desktop-dev convenience, not a mobile feature.
-- **iOS config**: bundle id `com.techseeding.leo.roadracer`, display name "Road Racer", deployment target 13.0 (pinned in `mobile/ios/Podfile`, required by `webview_flutter_wkwebview`). Org prefix is `com.techseeding.leo`.
+- **iOS config**: bundle id `com.techseeding.leo.roadracer`, display name "Road Racer 2026", deployment target 13.0 (pinned in `mobile/ios/Podfile`, required by `webview_flutter_wkwebview`). Org prefix is `com.techseeding.leo`.
 - **No widget tests**: the scaffolded `test/widget_test.dart` was removed because the WebView wrapper isn't worth a smoke test. Don't recreate it without a real test to put there.
 
 Flutter commands are wrapped as `pnpm mobile:*` scripts at the repo root, so you don't need to remember the Flutter CLI or `cd mobile`:
