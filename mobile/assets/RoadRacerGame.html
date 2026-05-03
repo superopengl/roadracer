@@ -10,20 +10,81 @@
       overflow: hidden;
     }
     body {
+      --game-size: min(100vw, calc(100vh - 220px));
       background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
       color: white;
       font-family: 'Segoe UI', Arial, sans-serif;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
     }
     canvas {
       display: block;
-      width: 100vmin;
-      height: 100vmin;
-      max-width: 100vw;
-      max-height: 100vh;
+      width: var(--game-size);
+      height: var(--game-size);
       box-shadow: 0 0 30px rgba(0,150,255,0.15), 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      padding: 10px 0 14px;
+      width: var(--game-size);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .controls button {
+      font-family: inherit;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: white;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 8px;
+      touch-action: manipulation;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .controls button:active,
+    .controls button.pressed {
+      background: rgba(255,107,53,0.35);
+      border-color: #ff6b35;
+    }
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 56px);
+      gap: 12px;
+      width: 100%;
+    }
+    .dpad button {
+      width: 100%;
+      height: 100%;
+      font-size: 32px;
+      padding: 0;
+      min-width: 0;
+    }
+    .dpad .up    { grid-column: 2; grid-row: 1; }
+    .dpad .left  { grid-column: 1; grid-row: 2; }
+    .dpad .down  { grid-column: 2; grid-row: 2; }
+    .dpad .right { grid-column: 3; grid-row: 2; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+    .actions button {
+      font-size: 13px;
+      padding: 0 10px;
+      min-width: 40px;
+      height: 36px;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      body { --game-size: 100vmin; }
+      .controls { display: none; }
     }
   </style>
 </head>
@@ -31,6 +92,58 @@
 
 <canvas id="gameCanvas" width="800" height="800"></canvas>
 
+<div class="controls">
+  <div class="actions">
+    <button data-key=" ">SPACE</button>
+    <button data-key="Enter">ENTER</button>
+    <button data-key="Escape">ESC</button>
+    <button data-key="p">P</button>
+    <button data-key="r">R</button>
+    <button data-key="h">H</button>
+    <button data-key="b">B</button>
+    <button data-key="y">Y</button>
+    <button data-key="n">N</button>
+    <button data-key="u">U</button>
+  </div>
+  <div class="dpad">
+    <button class="up"    data-key="ArrowUp">↑</button>
+    <button class="left"  data-key="ArrowLeft">←</button>
+    <button class="down"  data-key="ArrowDown">↓</button>
+    <button class="right" data-key="ArrowRight">→</button>
+  </div>
+</div>
+
+<script>
+// On-screen control buttons → synthetic KeyboardEvents on document.
+// Press-and-hold support so polled keys (movement) work; pointer events
+// cover both touch and mouse.
+(function bindControls() {
+  function dispatchKey(type, key) {
+    document.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
+  }
+  document.querySelectorAll(".controls button").forEach(btn => {
+    const key = btn.dataset.key;
+    let pressed = false;
+    const press = e => {
+      e.preventDefault();
+      if (pressed) return;
+      pressed = true;
+      btn.classList.add("pressed");
+      dispatchKey("keydown", key);
+    };
+    const release = () => {
+      if (!pressed) return;
+      pressed = false;
+      btn.classList.remove("pressed");
+      dispatchKey("keyup", key);
+    };
+    btn.addEventListener("pointerdown", press);
+    btn.addEventListener("pointerup", release);
+    btn.addEventListener("pointerleave", release);
+    btn.addEventListener("pointercancel", release);
+  });
+})();
+</script>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
