@@ -64,7 +64,8 @@ Flutter commands are wrapped as `pnpm mobile:*` scripts at the repo root, so you
 ```sh
 pnpm mobile:install     # flutter pub get
 pnpm mobile:analyze     # flutter analyze — should report no issues
-pnpm mobile:run         # flutter run -d "iPhone 17 Pro" — Leo's default sim
+pnpm mobile:run         # flutter run -d "iPhone 11 Pro Max" — 6.5" screen for App Store screenshots
+pnpm mobile:run:ipad    # flutter run -d "iPad Pro 13-inch (M4)" — 12.9"/13" iPad screenshot tier
 pnpm mobile:build:ios   # flutter build ios --release --no-codesign
 pnpm mobile:build:ipa   # flutter build ipa — signed .ipa for distribution
 pnpm mobile:pods        # cd mobile/ios && pod install

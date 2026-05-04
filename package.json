@@ -12,10 +12,11 @@
     "dev": "serve --listen ${PORT:-8000} --no-clipboard mobile/assets",
     "mobile:install": "cd mobile && flutter pub get",
     "mobile:analyze": "cd mobile && flutter analyze",
-    "mobile:run": "cd mobile && flutter run -d \"iPhone 17 Pro\"",
+    "mobile:run": "cd mobile && flutter run -d \"iPhone 11 Pro Max\"",
+    "mobile:run:ipad": "cd mobile && flutter run -d \"iPad Pro 13-inch (M4)\"",
     "mobile:physical": "cd mobile && flutter run -d \"Jun 13\"",
     "mobile:build:ios": "cd mobile && flutter build ios --release --no-codesign",
-    "mobile:build:ipa": "cd mobile && flutter build ipa",
+    "mobile:build:ipa": "cd mobile && PATH=/usr/bin:$PATH flutter build ipa",
     "mobile:pods": "cd mobile/ios && pod install"
   },
   "devDependencies": {
