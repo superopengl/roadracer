@@ -48,31 +48,71 @@
       padding: var(--controls-pad) 0;
       user-select: none;
       -webkit-user-select: none;
+      /* Brushed-metal panel — silver→graphite gradient, fine vertical
+         "brush" striation, top specular highlight, and a darkened bottom
+         edge for depth. */
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.025) 0px,
+          rgba(255, 255, 255, 0.025) 1px,
+          transparent 1px,
+          transparent 3px
+        ),
+        linear-gradient(
+          180deg,
+          #5a6068 0%,
+          #4a4f57 12%,
+          #393d45 38%,
+          #2a2e36 70%,
+          #1d2026 100%
+        );
+      box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.22),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.45),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.35);
     }
+    /* Buttons mirror the title panel: translucent gunmetal body, gold-
+       tinted border, top specular highlight, and a soft outer drop
+       shadow. */
     .controls button {
       font-family: inherit;
       font-weight: 700;
       letter-spacing: 0.5px;
-      color: white;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.28);
+      color: #fff4d6;
+      background: linear-gradient(
+        180deg,
+        rgba(120, 125, 135, 0.55) 0%,
+        rgba(70, 75, 85, 0.65) 55%,
+        rgba(35, 38, 45, 0.78) 100%
+      );
+      border: 1.5px solid rgba(247, 201, 72, 0.55);
       border-radius: 14px;
       backdrop-filter: blur(14px) saturate(140%);
       -webkit-backdrop-filter: blur(14px) saturate(140%);
       box-shadow:
-        0 6px 18px rgba(0,0,0,0.28),
-        inset 0 1px 0 rgba(255,255,255,0.25);
+        0 6px 18px rgba(0, 0, 0, 0.45),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.32),
+        inset 0 -1.5px 0 rgba(0, 0, 0, 0.4);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
       touch-action: manipulation;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
     .controls button:active,
     .controls button.pressed {
-      background: rgba(255,107,53,0.42);
-      border-color: rgba(255,107,53,0.85);
+      color: #fff8e0;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 210, 110, 0.55) 0%,
+        rgba(255, 138, 60, 0.6) 55%,
+        rgba(217, 77, 26, 0.65) 100%
+      );
+      border-color: rgba(255, 230, 150, 0.95);
       box-shadow:
-        0 2px 8px rgba(255,107,53,0.35),
-        inset 0 1px 0 rgba(255,255,255,0.3);
+        0 2px 10px rgba(255, 140, 40, 0.55),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -1.5px 0 rgba(120, 50, 10, 0.45);
     }
     .joystick {
       display: flex;
@@ -84,14 +124,19 @@
       width: var(--joy);
       height: var(--joy);
       border-radius: 50%;
-      background: rgba(255,255,255,0.10);
-      border: 2px solid rgba(255,255,255,0.28);
+      background: radial-gradient(
+        circle at 50% 30%,
+        rgba(135, 140, 150, 0.55),
+        rgba(70, 75, 85, 0.7) 60%,
+        rgba(30, 33, 40, 0.82) 100%
+      );
+      border: 2px solid rgba(247, 201, 72, 0.55);
       backdrop-filter: blur(18px) saturate(140%);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
       box-shadow:
-        0 12px 40px rgba(0,0,0,0.35),
-        inset 0 2px 0 rgba(255,255,255,0.18),
-        inset 0 -2px 0 rgba(0,0,0,0.25);
+        0 12px 40px rgba(0, 0, 0, 0.45),
+        inset 0 2px 0 rgba(255, 230, 150, 0.3),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.35);
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
       cursor: grab;
@@ -106,18 +151,19 @@
       margin: calc(var(--knob) / -2) 0 0 calc(var(--knob) / -2);
       border-radius: 50%;
       background: radial-gradient(
-        circle at 35% 30%,
-        rgba(255,180,140,0.85),
-        rgba(255,107,53,0.55) 60%,
-        rgba(255,107,53,0.45)
+        circle at 35% 28%,
+        #fff4c2 0%,
+        #ffce4d 30%,
+        #ff8a3c 60%,
+        #d94d1a 100%
       );
-      border: 2px solid rgba(255,255,255,0.55);
+      border: 2px solid rgba(255, 230, 150, 0.85);
       backdrop-filter: blur(10px) saturate(160%);
       -webkit-backdrop-filter: blur(10px) saturate(160%);
       box-shadow:
-        0 8px 24px rgba(255,107,53,0.45),
-        inset 0 2px 6px rgba(255,255,255,0.4),
-        inset 0 -3px 8px rgba(0,0,0,0.2);
+        0 8px 24px rgba(255, 100, 30, 0.6),
+        inset 0 2px 6px rgba(255, 255, 255, 0.55),
+        inset 0 -3px 8px rgba(120, 50, 10, 0.5);
       pointer-events: none;
       transition: transform 0.12s ease-out;
       will-change: transform;
@@ -151,9 +197,12 @@
     }
 
     /* Touch portrait: canvas fills the screen width; controls take the
-       remaining vertical space below. */
+       remaining vertical space below. All 10 action keys (incl. SPACE
+       and ENTER) live in one flex-wrap row so narrow phones reflow
+       cleanly while wider screens fit them all in a single row. */
     @media (orientation: portrait) {
       body {
+        --joy: clamp(180px, 45vmin, 360px);
         --game-size: 100vw;
         flex-direction: column;
         justify-content: flex-start;
@@ -164,6 +213,38 @@
         flex: 1;
         min-height: 0;
         justify-content: space-evenly;
+        align-items: center;
+        padding: var(--controls-pad) 0;
+      }
+      .controls .actions {
+        max-width: min(100%, 720px);
+      }
+    }
+
+    /* Tablet portrait (squarish aspect): the canvas leaves only a short
+       band below, so stack the actions row on the left and joystick on
+       the right to keep everything visible without shrinking the canvas. */
+    @media (orientation: portrait) and (min-aspect-ratio: 3/5) {
+      body {
+        --joy: clamp(220px, 32vw, 320px);
+        --btn-h: clamp(48px, 5.5vw, 78px);
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--gap-controls);
+        align-items: center;
+        justify-items: center;
+        padding: var(--controls-pad);
+      }
+      .controls .actions {
+        grid-column: 1;
+        width: 100%;
+        max-width: none;
+      }
+      .controls .joystick {
+        grid-column: 2;
+        width: auto;
       }
     }
 
@@ -171,7 +252,7 @@
        remaining horizontal space on the right. */
     @media (orientation: landscape) {
       body {
-        --joy: clamp(140px, 36vmin, 360px);
+        --joy: clamp(160px, 50vmin, 360px);
         --btn-h: clamp(40px, 8.5vmin, 88px);
         --game-size: 100dvh;
         flex-direction: row;
@@ -184,7 +265,9 @@
         min-width: 0;
         padding: var(--controls-pad);
       }
-      .actions { max-width: var(--joy); }
+      .controls .actions {
+        max-width: 520px;
+      }
     }
 
     /* Desktop / mouse: hide on-screen controls, canvas fills the square */
@@ -208,8 +291,6 @@
     <button data-key="y">Y</button>
     <button data-key="n">N</button>
     <button data-key="u">U</button>
-  </div>
-  <div class="actions">
     <button data-key=" ">SPACE</button>
     <button data-key="Enter">ENTER</button>
   </div>
@@ -1461,6 +1542,24 @@ function drawKangarooObstacle(obs) {
 
 // Draw any obstacle by type
 function drawObstacleCar(obs) {
+  const isVehicle = obs.type === "car" || obs.type === "truck" ||
+    obs.type === "ambulance" || obs.type === "police" || obs.type === "ufo";
+
+  // Frosted halo — soft cool-tinted radial glow under each vehicle
+  if (isVehicle) {
+    const cx = obs.x + obs.width / 2;
+    const cy = obs.y + obs.height * 0.55;
+    const r = Math.max(obs.width, obs.height) * 0.85;
+    ctx.save();
+    const halo = ctx.createRadialGradient(cx, cy, obs.width * 0.25, cx, cy, r);
+    halo.addColorStop(0, "rgba(180, 215, 255, 0.22)");
+    halo.addColorStop(0.55, "rgba(180, 215, 255, 0.06)");
+    halo.addColorStop(1, "rgba(180, 215, 255, 0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.restore();
+  }
+
   switch (obs.type) {
     case "truck": drawTruckObstacle(obs); break;
     case "ambulance": drawAmbulanceObstacle(obs); break;
@@ -1470,6 +1569,22 @@ function drawObstacleCar(obs) {
     case "kangaroo": drawKangarooObstacle(obs); break;
     case "ufo": drawUfoObstacle(obs); break;
     default: drawCarObstacle(obs); break;
+  }
+
+  // Glass sheen — top-half specular highlight on cars/trucks/etc.
+  // Skip the UFO since it has its own glow treatment.
+  if (isVehicle && obs.type !== "ufo") {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(obs.x + 1, obs.y + 1, obs.width - 2, obs.height * 0.42, 8);
+    ctx.clip();
+    const sheen = ctx.createLinearGradient(0, obs.y, 0, obs.y + obs.height * 0.42);
+    sheen.addColorStop(0, "rgba(255,255,255,0.28)");
+    sheen.addColorStop(0.55, "rgba(255,255,255,0.08)");
+    sheen.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = sheen;
+    ctx.fillRect(obs.x, obs.y, obs.width, obs.height * 0.5);
+    ctx.restore();
   }
 }
 
@@ -1794,11 +1909,11 @@ function drawTitleScreen() {
   ctx.fill();
   ctx.restore();
 
-  // 2) Translucent body with subtle vertical tint
+  // 2) Translucent body — gunmetal grey to match the metal controls bar
   const bodyGrad = ctx.createLinearGradient(0, panelTop, 0, panelTop + panelH);
-  bodyGrad.addColorStop(0, "rgba(40, 60, 110, 0.55)");
-  bodyGrad.addColorStop(0.5, "rgba(20, 28, 60, 0.62)");
-  bodyGrad.addColorStop(1, "rgba(8, 12, 30, 0.7)");
+  bodyGrad.addColorStop(0, "rgba(110, 115, 125, 0.62)");
+  bodyGrad.addColorStop(0.5, "rgba(60, 65, 75, 0.72)");
+  bodyGrad.addColorStop(1, "rgba(28, 31, 38, 0.82)");
   ctx.fillStyle = bodyGrad;
   ctx.beginPath();
   ctx.roundRect(panelX, panelTop, panelW, panelH, panelR);
