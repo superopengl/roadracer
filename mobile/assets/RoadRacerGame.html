@@ -1747,32 +1747,41 @@ function drawTitleScreen() {
   ctx.save();
   ctx.translate(0, 120);
 
-  // Scattered obstacles on the road
+  // Scattered obstacles on the road — every obstacle type appears here.
   const deco = [
-    { type: "car",       x: 70,  y: 70, width: 52, height: 82, color: "#87CEEB" },
-    { type: "ambulance", x: 670, y: 55, width: 52, height: 82, color: "#ffffff" },
-    { type: "police",    x: 180, y: 120, width: 52, height: 82, color: "#111111" },
-    { type: "car",       x: 540, y: 90, width: 52, height: 82, color: "#ff8844" },
-    { type: "dog",       x: 100, y: 140, width: 30, height: 24, color: "#8B4513" },
-    { type: "person",    x: 370, y: 120, width: 24, height: 40, color: "#ffcc99" },
-    { type: "car",       x: 290, y: 160, width: 52, height: 82, color: "#44cc44" },
-    { type: "person",    x: 620, y: 125, width: 24, height: 40, color: "#c68642" },
-    { type: "ambulance", x: 490, y: 180, width: 52, height: 82, color: "#ffffff" },
-    { type: "dog",       x: 230, y: 180, width: 30, height: 24, color: "#dd9933" },
-    { type: "police",    x: 590, y: 200, width: 52, height: 82, color: "#111111" },
-    { type: "car",       x: 140, y: 210, width: 52, height: 82, color: "#ee88cc" },
+    { type: "car",       x: 70,  y: 80,  width: 52, height: 82,  color: "#87CEEB" },
+    { type: "truck",     x: 430, y: 0,   width: 52, height: 115, color: "#885500" },
+    { type: "ambulance", x: 670, y: 55,  width: 52, height: 82,  color: "#ffffff" },
+    { type: "ufo",       x: 720, y: 160, width: 65, height: 82,  color: "#88ccff" },
+    { type: "police",    x: 180, y: 130, width: 52, height: 82,  color: "#111111" },
+    { type: "car",       x: 540, y: 130, width: 52, height: 82,  color: "#ff8844" },
+    { type: "dog",       x: 30,  y: 200, width: 30, height: 24,  color: "#8B4513" },
+    { type: "person",    x: 370, y: 140, width: 24, height: 40,  color: "#ffcc99" },
+    { type: "car",       x: 290, y: 175, width: 52, height: 82,  color: "#44cc44" },
+    { type: "kangaroo",  x: 130, y: 165, width: 28, height: 44,  color: "#8B6914" },
+    { type: "person",    x: 620, y: 145, width: 24, height: 40,  color: "#c68642" },
+    { type: "truck",     x: 350, y: 215, width: 52, height: 115, color: "#556677" },
+    { type: "ambulance", x: 490, y: 215, width: 52, height: 82,  color: "#ffffff" },
+    { type: "dog",       x: 230, y: 220, width: 30, height: 24,  color: "#dd9933" },
+    { type: "police",    x: 590, y: 235, width: 52, height: 82,  color: "#111111" },
+    { type: "kangaroo",  x: 700, y: 270, width: 28, height: 44,  color: "#a07050" },
+    { type: "car",       x: 140, y: 245, width: 52, height: 82,  color: "#ee88cc" },
   ];
   for (const d of deco) { drawObstacleCar(d); }
 
-  // Dark overlay panel for text
+  // Dark overlay panel for text. The 60px offset leaves a visible gap
+  // between the deco vehicles above and the panel, so the title doesn't
+  // crowd the trucks/cars at the bottom of the cluster.
+  const panelTop = canvas.height / 2 - 20;
+  const panelH = 210;
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.beginPath();
-  ctx.roundRect(canvas.width / 2 - 300, canvas.height / 2 - 80, 600, 180, 14);
+  ctx.roundRect(canvas.width / 2 - 300, panelTop, 600, panelH, 14);
   ctx.fill();
   ctx.strokeStyle = "rgba(247,201,72,0.4)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(canvas.width / 2 - 300, canvas.height / 2 - 80, 600, 180, 14);
+  ctx.roundRect(canvas.width / 2 - 300, panelTop, 600, panelH, 14);
   ctx.stroke();
 
   // Title
@@ -1781,19 +1790,19 @@ function drawTitleScreen() {
   ctx.fillStyle = "#f7c948";
   ctx.font = "bold 64px 'Segoe UI', Arial";
   ctx.textAlign = "center";
-  ctx.fillText("Road Racer", canvas.width / 2, canvas.height / 2 - 25);
+  ctx.fillText("Road Racer", canvas.width / 2, panelTop + 80);
   ctx.shadowBlur = 0;
 
   // Subtitle
   ctx.fillStyle = "#f7c948";
   ctx.font = "16px 'Segoe UI', Arial";
-  ctx.fillText("In this fun game dodge people, cars, trucks and other things.", canvas.width / 2, canvas.height / 2 + 12);
-  ctx.fillText("Survive all levels. Have Fun!", canvas.width / 2, canvas.height / 2 + 30);
+  ctx.fillText("In this fun game dodge people, cars, trucks and other things.", canvas.width / 2, panelTop + 122);
+  ctx.fillText("Survive all levels. Have Fun!", canvas.width / 2, panelTop + 142);
 
   // Start hint
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.font = "16px 'Segoe UI', Arial";
-  ctx.fillText("Press Space to start", canvas.width / 2, canvas.height / 2 + 65);
+  ctx.fillText("Press Space to start", canvas.width / 2, panelTop + 180);
 
   ctx.restore();
   ctx.textAlign = "start";
