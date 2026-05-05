@@ -8,11 +8,23 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
       width: 100%;
-      height: 100%;
+      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
     }
     body {
-      --game-size: min(100vw, calc(100vh - 740px));
+      /* Responsive control sizing — scales with viewport but caps at the
+         original desktop dimensions, so iPhone, iPad portrait, and iPad
+         landscape all fit the canvas + controls without clipping. */
+      --joy: clamp(200px, 32vmin, 440px);
+      --knob: calc(var(--joy) * 0.41);
+      --btn-h: clamp(52px, 8.5vmin, 102px);
+      --btn-fs: calc(var(--btn-h) * 0.46);
+      --btn-pad: calc(var(--btn-h) * 0.2);
+      --btn-min-w: calc(var(--btn-h) * 0.98);
+      --gap-actions: calc(var(--btn-h) * 0.16);
+      --gap-controls: calc(var(--joy) * 0.11);
+      --controls-pad: calc(var(--btn-h) * 0.14);
       background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
       color: white;
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -29,11 +41,10 @@
     }
     .controls {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 48px;
-      padding: 10px 0 14px;
-      width: var(--game-size);
+      justify-content: center;
+      gap: var(--gap-controls);
+      padding: var(--controls-pad) 0;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -69,8 +80,8 @@
     }
     .joystick-base {
       position: relative;
-      width: 440px;
-      height: 440px;
+      width: var(--joy);
+      height: var(--joy);
       border-radius: 50%;
       background: rgba(255,255,255,0.10);
       border: 2px solid rgba(255,255,255,0.28);
@@ -89,9 +100,9 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 180px;
-      height: 180px;
-      margin: -90px 0 0 -90px;
+      width: var(--knob);
+      height: var(--knob);
+      margin: calc(var(--knob) / -2) 0 0 calc(var(--knob) / -2);
       border-radius: 50%;
       background: radial-gradient(
         circle at 35% 30%,
@@ -113,7 +124,7 @@
     .joystick-base.dragging .joystick-knob { transition: none; }
     .joystick-arrow {
       position: absolute;
-      font-size: 56px;
+      font-size: calc(var(--joy) * 0.13);
       font-weight: 700;
       line-height: 1;
       color: rgba(255,255,255,0.35);
@@ -129,14 +140,53 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 16px;
+      gap: var(--gap-actions);
     }
     .actions button {
-      font-size: 46px;
-      padding: 0 20px;
-      min-width: 100px;
-      height: 102px;
+      font-size: var(--btn-fs);
+      padding: 0 var(--btn-pad);
+      min-width: var(--btn-min-w);
+      height: var(--btn-h);
     }
+
+    /* Touch portrait: canvas on top, controls below in a column */
+    @media (orientation: portrait) {
+      body {
+        --controls-h: calc(
+          var(--joy) + var(--btn-h) * 2 + var(--gap-actions)
+          + var(--gap-controls) + var(--controls-pad) * 2
+        );
+        --game-size: min(100vw, calc(100dvh - var(--controls-h)));
+        flex-direction: column;
+      }
+      .controls {
+        flex-direction: column;
+        width: var(--game-size);
+      }
+    }
+
+    /* Touch landscape: canvas on the left, controls stacked on the right.
+       In landscape, vmin == height, so vmin-based sizing already shrinks
+       with available height — but we tighten the joystick clamp so all
+       three rows of buttons + the joystick fit on short phone screens. */
+    @media (orientation: landscape) {
+      body {
+        --joy: clamp(140px, 36vmin, 360px);
+        --btn-h: clamp(40px, 8.5vmin, 88px);
+        --controls-w: calc(var(--joy) + var(--controls-pad) * 4);
+        --game-size: min(100dvh, calc(100vw - var(--controls-w)));
+        flex-direction: row;
+      }
+      .controls {
+        flex-direction: column;
+        height: 100dvh;
+        width: var(--controls-w);
+        padding: var(--controls-pad);
+      }
+      .actions { max-width: var(--joy); }
+    }
+
+    /* Desktop / mouse: hide on-screen controls, canvas fills the square */
     @media (hover: hover) and (pointer: fine) {
       body { --game-size: 100vmin; }
       .controls { display: none; }
