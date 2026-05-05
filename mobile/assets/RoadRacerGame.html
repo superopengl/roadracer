@@ -1740,6 +1740,13 @@ function drawTitleScreen() {
   ctx.fillRect(track.x + track.width + 18, track.y, fw, track.height);
   ctx.fillRect(track.x - 18 - fw, track.y + track.height, track.width + 36 + fw * 2, fw);
 
+  // Center the title composition (decorations + panel + text) vertically.
+  // Decoration positions were tuned for the original 600-tall track; with
+  // the track now filling the full 800, shift everything down so the
+  // cluster sits at canvas center instead of clinging to the top.
+  ctx.save();
+  ctx.translate(0, 120);
+
   // Scattered obstacles on the road
   const deco = [
     { type: "car",       x: 70,  y: 70, width: 52, height: 82, color: "#87CEEB" },
@@ -1788,6 +1795,7 @@ function drawTitleScreen() {
   ctx.font = "16px 'Segoe UI', Arial";
   ctx.fillText("Press Space to start", canvas.width / 2, canvas.height / 2 + 65);
 
+  ctx.restore();
   ctx.textAlign = "start";
 }
 
