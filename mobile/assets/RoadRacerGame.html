@@ -1747,25 +1747,27 @@ function drawTitleScreen() {
   ctx.save();
   ctx.translate(0, 120);
 
-  // Scattered obstacles on the road — every obstacle type appears here.
+  // Scattered obstacles on the road — every obstacle type appears here,
+  // spread evenly across the vertical band above the title panel so the
+  // composition feels distributed rather than bottom-heavy.
   const deco = [
-    { type: "car",       x: 70,  y: 80,  width: 52, height: 82,  color: "#87CEEB" },
     { type: "truck",     x: 430, y: 0,   width: 52, height: 115, color: "#885500" },
-    { type: "ambulance", x: 670, y: 55,  width: 52, height: 82,  color: "#ffffff" },
-    { type: "ufo",       x: 720, y: 160, width: 65, height: 82,  color: "#88ccff" },
-    { type: "police",    x: 180, y: 130, width: 52, height: 82,  color: "#111111" },
-    { type: "car",       x: 540, y: 130, width: 52, height: 82,  color: "#ff8844" },
-    { type: "dog",       x: 30,  y: 200, width: 30, height: 24,  color: "#8B4513" },
-    { type: "person",    x: 370, y: 140, width: 24, height: 40,  color: "#ffcc99" },
-    { type: "car",       x: 290, y: 175, width: 52, height: 82,  color: "#44cc44" },
-    { type: "kangaroo",  x: 130, y: 165, width: 28, height: 44,  color: "#8B6914" },
-    { type: "person",    x: 620, y: 145, width: 24, height: 40,  color: "#c68642" },
-    { type: "truck",     x: 350, y: 215, width: 52, height: 115, color: "#556677" },
-    { type: "ambulance", x: 490, y: 215, width: 52, height: 82,  color: "#ffffff" },
-    { type: "dog",       x: 230, y: 220, width: 30, height: 24,  color: "#dd9933" },
-    { type: "police",    x: 590, y: 235, width: 52, height: 82,  color: "#111111" },
-    { type: "kangaroo",  x: 700, y: 270, width: 28, height: 44,  color: "#a07050" },
-    { type: "car",       x: 140, y: 245, width: 52, height: 82,  color: "#ee88cc" },
+    { type: "ambulance", x: 670, y: 18,  width: 52, height: 82,  color: "#ffffff" },
+    { type: "car",       x: 70,  y: 35,  width: 52, height: 82,  color: "#87CEEB" },
+    { type: "police",    x: 180, y: 53,  width: 52, height: 82,  color: "#111111" },
+    { type: "car",       x: 540, y: 70,  width: 52, height: 82,  color: "#ff8844" },
+    { type: "person",    x: 370, y: 88,  width: 24, height: 40,  color: "#ffcc99" },
+    { type: "person",    x: 620, y: 105, width: 24, height: 40,  color: "#c68642" },
+    { type: "ufo",       x: 720, y: 123, width: 65, height: 82,  color: "#88ccff" },
+    { type: "kangaroo",  x: 130, y: 140, width: 28, height: 44,  color: "#8B6914" },
+    { type: "car",       x: 290, y: 158, width: 52, height: 82,  color: "#44cc44" },
+    { type: "dog",       x: 30,  y: 175, width: 30, height: 24,  color: "#8B4513" },
+    { type: "truck",     x: 350, y: 193, width: 52, height: 115, color: "#556677" },
+    { type: "ambulance", x: 490, y: 210, width: 52, height: 82,  color: "#ffffff" },
+    { type: "dog",       x: 230, y: 228, width: 30, height: 24,  color: "#dd9933" },
+    { type: "police",    x: 590, y: 245, width: 52, height: 82,  color: "#111111" },
+    { type: "car",       x: 140, y: 263, width: 52, height: 82,  color: "#ee88cc" },
+    { type: "kangaroo",  x: 700, y: 280, width: 28, height: 44,  color: "#a07050" },
   ];
   for (const d of deco) { drawObstacleCar(d); }
 
