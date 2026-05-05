@@ -436,12 +436,12 @@ function startLevel(level) {
 // Track boundaries (simple rectangle track)
 // x/width chosen so the 18px grass shoulders sit flush against the
 // canvas left/right edges (canvas is 800 wide, so 800 - 2*18 = 764).
-// y=0 so the road reaches the canvas top with no chrome band.
+// y=0/height=800 so the road fills the entire canvas vertically.
 const track = {
   x: 18,
   y: 0,
   width: 764,
-  height: 600
+  height: 800
 };
 
 // Spawn point (top right corner)
@@ -2372,11 +2372,12 @@ function gameLoop() {
   }
   ctx.globalAlpha = 1;
 
-  // Draw blood indicator at bottom
+  // Draw blood indicator at bottom (rendered inside the road since the
+  // chrome band below the track was removed).
   const barW = 260;
   const barH = 22;
   const barX = (canvas.width - barW) / 2;
-  const barY = track.y + track.height + 18;
+  const barY = track.y + track.height - barH - 14;
 
   // Bar shadow
   ctx.fillStyle = "rgba(0,0,0,0.4)";
