@@ -1769,40 +1769,116 @@ function drawTitleScreen() {
   ];
   for (const d of deco) { drawObstacleCar(d); }
 
-  // Dark overlay panel for text. The 60px offset leaves a visible gap
-  // between the deco vehicles above and the panel, so the title doesn't
-  // crowd the trucks/cars at the bottom of the cluster.
+  // Frosted-glass title panel — layered for an Apple "liquid glass" feel:
+  //   1) soft outer drop shadow for depth
+  //   2) translucent body with a top-to-bottom tint gradient
+  //   3) bright top highlight band (specular sheen)
+  //   4) gold gradient border (brighter on top, dimmer at the bottom)
+  //   5) thin inner dark stroke just inside the border for a glass bevel
   const panelTop = canvas.height / 2 - 20;
   const panelH = 210;
-  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  const panelW = 600;
+  const panelX = canvas.width / 2 - panelW / 2;
+  const panelR = 22;
+
+  // 1) Outer drop shadow
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 12;
+  ctx.fillStyle = "rgba(0,0,0,0.001)";
   ctx.beginPath();
-  ctx.roundRect(canvas.width / 2 - 300, panelTop, 600, panelH, 14);
+  ctx.roundRect(panelX, panelTop, panelW, panelH, panelR);
   ctx.fill();
-  ctx.strokeStyle = "rgba(247,201,72,0.4)";
-  ctx.lineWidth = 2;
+  ctx.restore();
+
+  // 2) Translucent body with subtle vertical tint
+  const bodyGrad = ctx.createLinearGradient(0, panelTop, 0, panelTop + panelH);
+  bodyGrad.addColorStop(0, "rgba(40, 60, 110, 0.55)");
+  bodyGrad.addColorStop(0.5, "rgba(20, 28, 60, 0.62)");
+  bodyGrad.addColorStop(1, "rgba(8, 12, 30, 0.7)");
+  ctx.fillStyle = bodyGrad;
   ctx.beginPath();
-  ctx.roundRect(canvas.width / 2 - 300, panelTop, 600, panelH, 14);
+  ctx.roundRect(panelX, panelTop, panelW, panelH, panelR);
+  ctx.fill();
+
+  // 3) Top specular highlight clipped to panel rounded rect
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(panelX, panelTop, panelW, panelH, panelR);
+  ctx.clip();
+  const sheen = ctx.createLinearGradient(0, panelTop, 0, panelTop + panelH * 0.55);
+  sheen.addColorStop(0, "rgba(255,255,255,0.32)");
+  sheen.addColorStop(0.4, "rgba(255,255,255,0.06)");
+  sheen.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(panelX, panelTop, panelW, panelH);
+  ctx.restore();
+
+  // 4) Gold gradient border
+  const borderGrad = ctx.createLinearGradient(0, panelTop, 0, panelTop + panelH);
+  borderGrad.addColorStop(0, "rgba(255, 220, 130, 0.95)");
+  borderGrad.addColorStop(0.5, "rgba(247, 201, 72, 0.7)");
+  borderGrad.addColorStop(1, "rgba(180, 110, 30, 0.55)");
+  ctx.strokeStyle = borderGrad;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.roundRect(panelX, panelTop, panelW, panelH, panelR);
   ctx.stroke();
 
-  // Title
-  ctx.shadowColor = "rgba(255,107,53,0.5)";
-  ctx.shadowBlur = 30;
-  ctx.fillStyle = "#f7c948";
+  // 5) Inner bevel — thin dark line just inside the border
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(panelX + 2.5, panelTop + 2.5, panelW - 5, panelH - 5, panelR - 2);
+  ctx.stroke();
+
+  // Title — gradient fill with multiple glow layers
+  const titleX = canvas.width / 2;
+  const titleY = panelTop + 80;
   ctx.font = "bold 64px 'Segoe UI', Arial";
   ctx.textAlign = "center";
-  ctx.fillText("Road Racer", canvas.width / 2, panelTop + 80);
-  ctx.shadowBlur = 0;
+
+  // Outer fiery glow
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 90, 30, 0.85)";
+  ctx.shadowBlur = 36;
+  ctx.fillStyle = "rgba(255, 200, 80, 1)";
+  ctx.fillText("Road Racer", titleX, titleY);
+  ctx.restore();
+
+  // Inner gold glow + gradient fill
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 220, 120, 0.6)";
+  ctx.shadowBlur = 14;
+  const titleGrad = ctx.createLinearGradient(0, titleY - 50, 0, titleY + 10);
+  titleGrad.addColorStop(0, "#fff4c2");
+  titleGrad.addColorStop(0.45, "#ffce4d");
+  titleGrad.addColorStop(0.75, "#ff8a3c");
+  titleGrad.addColorStop(1, "#d94d1a");
+  ctx.fillStyle = titleGrad;
+  ctx.fillText("Road Racer", titleX, titleY);
+  ctx.restore();
+
+  // Outline stroke for definition
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(120, 50, 10, 0.9)";
+  ctx.strokeText("Road Racer", titleX, titleY);
 
   // Subtitle
-  ctx.fillStyle = "#f7c948";
+  ctx.fillStyle = "rgba(255, 240, 200, 0.92)";
   ctx.font = "16px 'Segoe UI', Arial";
-  ctx.fillText("In this fun game dodge people, cars, trucks and other things.", canvas.width / 2, panelTop + 122);
-  ctx.fillText("Survive all levels. Have Fun!", canvas.width / 2, panelTop + 142);
+  ctx.fillText("In this fun game dodge people, cars, trucks and other things.", titleX, panelTop + 122);
+  ctx.fillText("Survive all levels. Have Fun!", titleX, panelTop + 142);
 
-  // Start hint
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  // Start hint with a soft pulsing-style glow
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 255, 255, 0.6)";
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = "16px 'Segoe UI', Arial";
-  ctx.fillText("Press Space to start", canvas.width / 2, panelTop + 180);
+  ctx.fillText("Press Space to start", titleX, panelTop + 180);
+  ctx.restore();
 
   ctx.restore();
   ctx.textAlign = "start";
