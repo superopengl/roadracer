@@ -436,9 +436,10 @@ function startLevel(level) {
 // Track boundaries (simple rectangle track)
 // x/width chosen so the 18px grass shoulders sit flush against the
 // canvas left/right edges (canvas is 800 wide, so 800 - 2*18 = 764).
+// y=0 so the road reaches the canvas top with no chrome band.
 const track = {
   x: 18,
-  y: 50,
+  y: 0,
   width: 764,
   height: 600
 };
@@ -2307,13 +2308,14 @@ function gameLoop() {
   ctx.fillStyle = frameBg;
   ctx.fillRect(0, 0, canvas.width, track.y);                          // top
 
-  // Top HUD - speed and controls
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  // Top HUD - speed and controls (rendered inside the road since the
+  // chrome band above the track was removed).
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = "12px 'Segoe UI', Arial";
   ctx.textAlign = "left";
-  ctx.fillText("LV " + currentLevel + " - " + getLevelConfig().name, track.x, track.y - 12);
+  ctx.fillText("LV " + currentLevel + " - " + getLevelConfig().name, track.x + 84, track.y + 26);
   ctx.textAlign = "center";
-  ctx.fillText("P = Pause  |  T = Resume  |  R = Reset  |  \u2190\u2191\u2192\u2193 = Drive", canvas.width / 2, track.y - 12);
+  ctx.fillText("P = Pause  |  T = Resume  |  R = Reset  |  \u2190\u2191\u2192\u2193 = Drive", canvas.width / 2, track.y + 50);
   ctx.textAlign = "start";
 
   // Token bar in top left
