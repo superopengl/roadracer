@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Road Racer 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <style>
@@ -149,38 +150,38 @@
       height: var(--btn-h);
     }
 
-    /* Touch portrait: canvas on top, controls below in a column */
+    /* Touch portrait: canvas fills the screen width; controls take the
+       remaining vertical space below. */
     @media (orientation: portrait) {
       body {
-        --controls-h: calc(
-          var(--joy) + var(--btn-h) * 2 + var(--gap-actions)
-          + var(--gap-controls) + var(--controls-pad) * 2
-        );
-        --game-size: min(100vw, calc(100dvh - var(--controls-h)));
+        --game-size: 100vw;
         flex-direction: column;
+        justify-content: flex-start;
       }
       .controls {
         flex-direction: column;
-        width: var(--game-size);
+        width: 100vw;
+        flex: 1;
+        min-height: 0;
+        justify-content: space-evenly;
       }
     }
 
-    /* Touch landscape: canvas on the left, controls stacked on the right.
-       In landscape, vmin == height, so vmin-based sizing already shrinks
-       with available height — but we tighten the joystick clamp so all
-       three rows of buttons + the joystick fit on short phone screens. */
+    /* Touch landscape: canvas fills the screen height; controls take the
+       remaining horizontal space on the right. */
     @media (orientation: landscape) {
       body {
         --joy: clamp(140px, 36vmin, 360px);
         --btn-h: clamp(40px, 8.5vmin, 88px);
-        --controls-w: calc(var(--joy) + var(--controls-pad) * 4);
-        --game-size: min(100dvh, calc(100vw - var(--controls-w)));
+        --game-size: 100dvh;
         flex-direction: row;
+        justify-content: flex-start;
       }
       .controls {
         flex-direction: column;
         height: 100dvh;
-        width: var(--controls-w);
+        flex: 1;
+        min-width: 0;
         padding: var(--controls-pad);
       }
       .actions { max-width: var(--joy); }
@@ -433,10 +434,12 @@ function startLevel(level) {
 }
 
 // Track boundaries (simple rectangle track)
+// x/width chosen so the 18px grass shoulders sit flush against the
+// canvas left/right edges (canvas is 800 wide, so 800 - 2*18 = 764).
 const track = {
-  x: 50,
+  x: 18,
   y: 50,
-  width: 700,
+  width: 764,
   height: 600
 };
 
