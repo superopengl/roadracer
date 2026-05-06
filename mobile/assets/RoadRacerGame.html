@@ -171,18 +171,16 @@
     .joystick-base.dragging .joystick-knob { transition: none; }
     .joystick-arrow {
       position: absolute;
-      font-size: calc(var(--joy) * 0.13);
-      font-weight: 700;
-      line-height: 1;
-      color: rgba(255,255,255,0.35);
+      top: 50%;
+      left: 50%;
+      width: calc(var(--joy) * 0.10);
+      height: calc(var(--joy) * 0.10);
+      background: rgba(255, 230, 150, 0.78);
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+      transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(var(--joy) * -0.40));
       pointer-events: none;
-      user-select: none;
-      -webkit-user-select: none;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
     }
-    .joystick-arrow.up    { top: 4%;  left: 50%; transform: translateX(-50%); }
-    .joystick-arrow.down  { bottom: 4%; left: 50%; transform: translateX(-50%); }
-    .joystick-arrow.left  { top: 50%; left: 4%;  transform: translateY(-50%); }
-    .joystick-arrow.right { top: 50%; right: 4%; transform: translateY(-50%); }
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -296,10 +294,10 @@
   </div>
   <div class="joystick">
     <div class="joystick-base">
-      <span class="joystick-arrow up">↑</span>
-      <span class="joystick-arrow left">←</span>
-      <span class="joystick-arrow right">→</span>
-      <span class="joystick-arrow down">↓</span>
+      <div class="joystick-arrow" style="--a: 0deg"></div>
+      <div class="joystick-arrow" style="--a: 90deg"></div>
+      <div class="joystick-arrow" style="--a: 180deg"></div>
+      <div class="joystick-arrow" style="--a: 270deg"></div>
       <div class="joystick-knob"></div>
     </div>
   </div>
