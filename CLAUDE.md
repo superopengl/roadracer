@@ -8,10 +8,16 @@ Road Racer — a top-down browser game. This is a vibe coding craft by Leo, a 10
 
 The repo has two targets that share one source of truth:
 
-1. **The game itself** — `mobile/assets/RoadRacerGame.html`. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build step, no runtime JS dependencies. The only tooling is a static dev server (`pnpm dev`); see "Running the browser game" below.
+1. **The game itself** — canonical source is `roadracer2026/index.html`. One self-contained HTML file: pure HTML/CSS/vanilla JS using an HTML5 `<canvas>` 2D context. No build step, no runtime JS dependencies. The only tooling is a static dev server (`pnpm dev`); see "Running the browser game" below.
 2. **iOS app wrapper** — `mobile/`, a Flutter 3 + `webview_flutter` project that loads `assets/RoadRacerGame.html` (relative to the Flutter project) and renders it fullscreen in WKWebView. iOS only.
 
-The HTML lives inside `mobile/assets/` rather than at the repo root because that's Flutter's native asset path — the iOS app picks it up directly via `pubspec.yaml`, no symlink or copy step. The web dev server (`pnpm dev`) treats the same directory as its docroot, so editing one file updates both targets.
+`mobile/assets/RoadRacerGame.html` is a **symlink** to `../../roadracer2026/index.html`. That's Flutter's native asset path, so the iOS build picks up the symlinked file via `pubspec.yaml` without a copy step. The web dev server (`pnpm dev`) treats `mobile/assets/` as its docroot and transparently follows the symlink. Net effect: edit `roadracer2026/index.html` and both targets pick up the change automatically.
+
+### `roadracer2026/` — the canonical game source (and Leo's sandbox)
+
+`roadracer2026/index.html` is Leo's evolving copy of the game, modified directly with AI, and is now the source of truth that the iOS app and dev server mirror. Treat that folder as Leo's territory: don't reformat it, don't refactor it from the outside, and follow `roadracer2026/CLAUDE.md` (not this file) when working inside it.
+
+**Always edit `roadracer2026/index.html` directly** — never edit `mobile/assets/RoadRacerGame.html`. They are the same bytes (via symlink), but editing through the symlink path is confusing in diffs and review.
 
 Keep this in mind when proposing changes: prefer small, readable edits over refactors or new abstractions in the game itself, and don't introduce runtime tooling (bundlers, frameworks, transpilers) on the HTML side unless asked — the game must stay loadable as a single file. The Flutter project is a thin shell; don't grow it beyond the WebView wrapper without a specific reason.
 
