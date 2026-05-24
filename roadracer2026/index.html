@@ -112,19 +112,20 @@ let currentLevel = 0; // 0 = selecting, 1-5 = playing
 let showingTitleScreen = true;
 let showingLevelSelect = false;
 let selectedLevel = 1;
-let focusTarget = 0; // 0 = levels, 1 = category, 2 = shop items, 3 = garage cats, 4 = garage items
+let focusTarget = 0; // 0 = levels, 1 = shop category, 2 = shop items
 let shopCursor = "color_blue";
 let garageScroll = 0;
 let garageCursor = "color_blue";
 let confirmBuy = null;
+let confirmExit = false;
 
 const levelConfig = [
   null, // placeholder for index 0
   { name: "Rookie",     obstacleSpeed: 0.8, spawnRate: 0.006, pedRate: 0.001, dogRate: 0.001, rooRate: 0.0008, laneChangeRate: 0.001, maxVehicles: 8,  startObstacles: 2, color: "#44ff66" },
   { name: "Driver",     obstacleSpeed: 0.9, spawnRate: 0.01,  pedRate: 0.002, dogRate: 0.002, rooRate: 0.0012, laneChangeRate: 0.003, maxVehicles: 12, startObstacles: 3, color: "#66ccff" },
-  { name: "Racer",      obstacleSpeed: 1.2, spawnRate: 0.015, pedRate: 0.003, dogRate: 0.003, rooRate: 0.002,  laneChangeRate: 0.005, maxVehicles: 20, startObstacles: 5, color: "#ffaa00" },
-  { name: "Pro",        obstacleSpeed: 1.6, spawnRate: 0.02,  pedRate: 0.004, dogRate: 0.004, rooRate: 0.003,  laneChangeRate: 0.008, maxVehicles: 25, startObstacles: 7, color: "#ff6633" },
-  { name: "Impossible", obstacleSpeed: 2.2, spawnRate: 0.03,  pedRate: 0.006, dogRate: 0.005, rooRate: 0.004,  laneChangeRate: 0.012, maxVehicles: 32, startObstacles: 9, color: "#ff2222" },
+  { name: "Racer",      obstacleSpeed: 1.2, spawnRate: 0.013, pedRate: 0.003, dogRate: 0.003, rooRate: 0.002,  laneChangeRate: 0.005, maxVehicles: 20, startObstacles: 5, color: "#ffaa00" },
+  { name: "Pro",        obstacleSpeed: 1.6, spawnRate: 0.017, pedRate: 0.004, dogRate: 0.004, rooRate: 0.003,  laneChangeRate: 0.008, maxVehicles: 25, startObstacles: 7, color: "#ff6633" },
+  { name: "Impossible", obstacleSpeed: 2.2, spawnRate: 0.025, pedRate: 0.006, dogRate: 0.005, rooRate: 0.004,  laneChangeRate: 0.012, maxVehicles: 32, startObstacles: 9, color: "#ff2222" },
 ];
 
 function getLevelConfig() { return levelConfig[currentLevel] || levelConfig[1]; }
@@ -144,8 +145,8 @@ const isTablet = _hasTouch && _minScreenDim >= 600;
 function getDeviceSpawnMultiplier(level) {
   if (level < 3) return 1;
   if (isPhone) {
-    // Racer / Pro / Impossible — ease off a bit on small screens
-    return level === 5 ? 0.7 : level === 4 ? 0.78 : 0.85;
+    // Racer / Pro / Impossible — bumped back up after the earlier reductions
+    return level === 5 ? 0.78 : level === 4 ? 0.84 : 0.90;
   }
   if (isTablet) {
     // Same levels — boost traffic on tablets where the road is wider
@@ -227,19 +228,32 @@ const DESIGN_H = 1100;
 let renderW = canvas.width;
 let renderH = canvas.height;
 
-// The level-select and help screens lay out their content within the top ~820
-// pixels of the 1100-tall design canvas; the rest is empty padding. We use
-// uniform scaling (no stretch) bound by the smaller of width-fit and content-
-// height-fit, so text stays in its natural shape on every aspect ratio.
-const DESIGN_CONTENT_H = 820;
+// The level-select has two layouts: a vertical stack of buttons for narrow
+// phone-aspect viewports, and a horizontal row of 5 buttons for tablets and
+// desktops. Each layout has a different content height, so the design
+// transform's content-height for scaling is chosen based on which layout is
+// active. isPhoneLayout() is the single source of truth — both draw and
+// hit-test consult it.
+// Phone layout = short edge < 600px. Catches every iPhone in portrait while
+// keeping iPads (≥ 744px short edge) in the horizontal-row layout.
+function isPhoneLayout() { return Math.min(canvas.width, canvas.height) < 600; }
+// Tablet ≈ iPad-sized: wide enough for a horizontal row, but smaller than a
+// full desktop screen. Uses slimmer level buttons than the desktop branch.
+function isTabletLayout() { return !isPhoneLayout() && canvas.width <= 1200; }
+function getDesignContentH() {
+  if (isPhoneLayout()) return 1120;
+  if (isTabletLayout()) return 700;
+  return 740;
+}
 
 function getDesignTransform() {
-  const s = Math.min(canvas.width / DESIGN_W, canvas.height / DESIGN_CONTENT_H);
+  const contentH = getDesignContentH();
+  const s = Math.min(canvas.width / DESIGN_W, canvas.height / contentH);
   const dw = DESIGN_W * s;
-  // Center the visible content band (0..DESIGN_CONTENT_H), not the full design
-  // canvas, so the top of the layout — "ROAD RACER" included — stays on screen
-  // when the viewport is shorter than the full design height.
-  const dh = DESIGN_CONTENT_H * s;
+  // Center the visible content band (0..contentH), not the full design canvas,
+  // so the top of the layout — "ROAD RACER" included — stays on screen when
+  // the viewport is shorter than the full design height.
+  const dh = contentH * s;
   return { sx: s, sy: s, ox: (canvas.width - dw) / 2, oy: (canvas.height - dh) / 2 };
 }
 
@@ -277,6 +291,7 @@ function canvasToDesign(cx, cy) {
 
 // Obstacles
 let obstacleBaseSpeed = 1;
+let spawnCooldown = 0;  // frames remaining before the next vehicle spawn is allowed
 const obstacles = [];
 const numLanes = 5;
 
@@ -293,15 +308,17 @@ function getLaneCenterX(lane, vw) {
   return track.x + lane * laneWidth + (laneWidth - vw) / 2;
 }
 
-// Vehicles, pedestrians, dogs, and kangaroos are scaled up a bit on tablets
-// so they read better on the wider road. Phones / desktops stay at 1.0.
-const obstacleScale = isTablet ? 1.3 : 1;
+// Vehicles, pedestrians, dogs, and kangaroos are scaled per device:
+// tablets get bigger actors so the wider road feels populated; phones get
+// smaller ones so cars fit comfortably in the narrow lanes and the player
+// has more room to dodge.
+const obstacleScale = isTablet ? 1.3 : isPhone ? 0.78 : 1;
 
-function randomObstacle(yOverride) {
+function randomObstacle(yOverride, laneOverride) {
   const vt = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
   const w = vt.w * obstacleScale;
   const h = vt.h * obstacleScale;
-  const lane = Math.floor(Math.random() * numLanes);
+  const lane = laneOverride !== undefined ? laneOverride : Math.floor(Math.random() * numLanes);
   const x = getLaneCenterX(lane, w);
   const y = yOverride !== undefined ? yOverride : track.y - h;
   const color = vt.colors[Math.floor(Math.random() * vt.colors.length)];
@@ -401,8 +418,8 @@ document.addEventListener("keydown", e => {
       shopScroll = cats.indexOf(item.category);
     };
 
-    if (e.key === "ArrowUp") { focusTarget = (focusTarget + 4) % 5; return; }
-    if (e.key === "ArrowDown") { focusTarget = (focusTarget + 1) % 5; if (focusTarget === 2) syncCursorToCategory(); return; }
+    if (e.key === "ArrowUp") { focusTarget = (focusTarget + 2) % 3; return; }
+    if (e.key === "ArrowDown") { focusTarget = (focusTarget + 1) % 3; if (focusTarget === 2) syncCursorToCategory(); return; }
 
     const syncCursorToCategory = () => {
       const cat = cats[shopScroll];
@@ -424,29 +441,6 @@ document.addEventListener("keydown", e => {
         const curIdx = catItems.findIndex(i => i.id === shopCursor);
         const prev = catItems[(curIdx - 1 + catItems.length) % catItems.length];
         setSelected(prev.id);
-      } else if (focusTarget === 3) {
-        // Garage category tabs
-        garageScroll = (garageScroll + 3) % 4;
-        // Sync garage cursor to first owned item in new category
-        const cat = cats[garageScroll];
-        const catOwned = shopItems.filter(i => i.category === cat && i.owned);
-        if (catOwned.length > 0) garageCursor = catOwned[0].id;
-      } else if (focusTarget === 4) {
-        const cat = cats[garageScroll];
-        const ownedItems = shopItems.filter(i => i.category === cat && i.owned);
-        if (ownedItems.length > 0) {
-          const curIdx = ownedItems.findIndex(i => i.id === garageCursor);
-          const prev = ownedItems[(curIdx - 1 + ownedItems.length) % ownedItems.length];
-          garageCursor = prev.id;
-          // Auto-equip
-          const item = prev;
-          if (item.category === "color") selectedColor = item.id;
-          else if (item.category === "glow") selectedGlow = item.id;
-          else if (item.category === "speed") selectedSpeed = item.id;
-          else selectedHeadlight = item.id;
-          shopScroll = cats.indexOf(item.category);
-          shopCursor = item.id;
-        }
       }
       return;
     }
@@ -462,27 +456,6 @@ document.addEventListener("keydown", e => {
         const curIdx = catItems.findIndex(i => i.id === shopCursor);
         const next = catItems[(curIdx + 1) % catItems.length];
         setSelected(next.id);
-      } else if (focusTarget === 3) {
-        // Garage category tabs
-        garageScroll = (garageScroll + 1) % 4;
-        const cat = cats[garageScroll];
-        const catOwned = shopItems.filter(i => i.category === cat && i.owned);
-        if (catOwned.length > 0) garageCursor = catOwned[0].id;
-      } else if (focusTarget === 4) {
-        const cat = cats[garageScroll];
-        const ownedItems = shopItems.filter(i => i.category === cat && i.owned);
-        if (ownedItems.length > 0) {
-          const curIdx = ownedItems.findIndex(i => i.id === garageCursor);
-          const next = ownedItems[(curIdx + 1) % ownedItems.length];
-          garageCursor = next.id;
-          const item = next;
-          if (item.category === "color") selectedColor = item.id;
-          else if (item.category === "glow") selectedGlow = item.id;
-          else if (item.category === "speed") selectedSpeed = item.id;
-          else selectedHeadlight = item.id;
-          shopScroll = cats.indexOf(item.category);
-          shopCursor = item.id;
-        }
       }
       return;
     }
@@ -512,15 +485,25 @@ document.addEventListener("keydown", e => {
     if (e.key === "Enter") { startLevel(selectedLevel); return; }
     if (e.key >= "1" && e.key <= "5") { startLevel(parseInt(e.key)); return; }
   }
+  // While the return-to-menu prompt is up, only Y/N/Esc respond.
+  if (confirmExit) {
+    if (e.key === "y" || e.key === "Y") {
+      confirmExit = false;
+      showingTitleScreen = true;
+      won = false; gameOver = false; resetting = false; paused = false;
+      obstacles.length = 0;
+      explosionParticles.length = 0;
+      damagePopups.length = 0;
+      crashMessage = null;
+    } else if (e.key === "n" || e.key === "N" || e.key === "Escape") {
+      confirmExit = false;
+    }
+    return;
+  }
   if (e.key === "p" || e.key === "P") paused = true;
   if (e.key === "t" || e.key === "T") paused = false;
   if (e.key === "Escape") {
-    showingTitleScreen = true;
-    won = false; gameOver = false; resetting = false; paused = false;
-    obstacles.length = 0;
-    explosionParticles.length = 0;
-    damagePopups.length = 0;
-    crashMessage = null;
+    confirmExit = true;
     return;
   }
   if ((e.key === "r" || e.key === "R") && !resetting) {
@@ -583,58 +566,85 @@ function inGameButtonHit(px, py) {
   return null;
 }
 
+// Layout for the "Return to menu?" confirmation overlay. Coordinates are in
+// viewport pixels (the dialog is drawn outside the design transform).
+function confirmExitLayout() {
+  const mw = Math.min(360, canvas.width * 0.85);
+  const mh = 170;
+  const mx = (canvas.width - mw) / 2;
+  const my = (canvas.height - mh) / 2;
+  const by = my + 115;
+  const bw = 100, bh = 36;
+  return {
+    box: { x: mx, y: my, w: mw, h: mh },
+    yes: { x: mx + mw / 2 - bw - 12, y: by, w: bw, h: bh },
+    no:  { x: mx + mw / 2 + 12,      y: by, w: bw, h: bh },
+  };
+}
+
+function confirmExitHit(px, py) {
+  const l = confirmExitLayout();
+  if (pointInRect(px, py, l.yes)) return "yes";
+  if (pointInRect(px, py, l.no)) return "no";
+  return null;
+}
+
 // Hit-test the level-select / shop / garage layout. Geometry mirrors
 // drawLevelSelect() so any change there must update here too. Coordinates
 // are in DESIGN space — call canvasToDesign() first to convert taps.
 function levelSelectHit(px, py) {
   const W = DESIGN_W;
-  // Level buttons
-  const btnW = 140, btnH = 180, gap = 15;
-  const startX = (W - (5 * btnW + 4 * gap)) / 2;
-  const btnY = 180;
-  for (let i = 1; i <= 5; i++) {
-    const bx = startX + (i - 1) * (btnW + gap);
-    if (pointInRect(px, py, { x: bx, y: btnY, w: btnW, h: btnH })) return { kind: "level", value: i };
+  // Level buttons — vertical stack on phone-aspect viewports, horizontal row
+  // (the original layout) on tablet/desktop.
+  let shopY;
+  if (isPhoneLayout()) {
+    const btnW = 400, btnH = 138, btnGap = 12;
+    const btnX = (W - btnW) / 2;
+    const btnY = 130;
+    for (let i = 1; i <= 5; i++) {
+      const by = btnY + (i - 1) * (btnH + btnGap);
+      if (pointInRect(px, py, { x: btnX, y: by, w: btnW, h: btnH })) return { kind: "level", value: i };
+    }
+    shopY = btnY + 5 * btnH + 4 * btnGap + 28;
+  } else {
+    // iPad/tablet uses slimmer buttons; desktop keeps the full 170x240.
+    const tablet = isTabletLayout();
+    const btnW = tablet ? 140 : 170;
+    const btnH = tablet ? 195 : 240;
+    const gap = tablet ? 12 : 4;
+    const startX = (W - (5 * btnW + 4 * gap)) / 2;
+    const btnY = 185;
+    for (let i = 1; i <= 5; i++) {
+      const bx = startX + (i - 1) * (btnW + gap);
+      if (pointInRect(px, py, { x: bx, y: btnY, w: btnW, h: btnH })) return { kind: "level", value: i };
+    }
+    shopY = btnY + btnH + 30;
   }
-  // Shop section
-  const shopY = btnY + btnH + 30;
-  const shopH = 160;
-  const tabW = 110;
+  // Shop section — bigger panel + larger item tiles, grid of up to 4 per row
+  const shopH = 260;
+  const tabW = 130;
   const tabStartX = W / 2 - (4 * tabW + 30) / 2;
   for (let i = 0; i < 4; i++) {
     const tx = tabStartX + i * (tabW + 10);
-    if (pointInRect(px, py, { x: tx, y: shopY + 30, w: tabW, h: 24 })) return { kind: "shopTab", value: i };
+    if (pointInRect(px, py, { x: tx, y: shopY + 30, w: tabW, h: 28 })) return { kind: "shopTab", value: i };
   }
   const categories = ["color", "glow", "speed", "headlight"];
   const catItems = shopItems.filter(it => it.category === categories[shopScroll]);
-  const itemW = 80, itemH = 65, itemGap = 8;
-  const totalItemW = catItems.length * itemW + (catItems.length - 1) * itemGap;
-  const itemStartX = W / 2 - totalItemW / 2;
-  const itemY = shopY + 62;
+  const itemW = 104, itemH = 86, itemGap = 10, itemRowGap = 10;
+  const itemsPerRow = 4;
+  const itemY = shopY + 72;
   for (let i = 0; i < catItems.length; i++) {
-    const ix = itemStartX + i * (itemW + itemGap);
-    if (pointInRect(px, py, { x: ix, y: itemY, w: itemW, h: itemH })) return { kind: "shopItem", id: catItems[i].id };
-  }
-  // Garage section
-  const garageY = shopY + shopH + 14;
-  const garageH = 160;
-  const gTabW = 105;
-  const gTabStartX = W / 2 - (4 * gTabW + 24) / 2;
-  for (let i = 0; i < 4; i++) {
-    const gtx = gTabStartX + i * (gTabW + 8);
-    if (pointInRect(px, py, { x: gtx, y: garageY + 18, w: gTabW, h: 20 })) return { kind: "garageTab", value: i };
-  }
-  const ownedItems = shopItems.filter(it => it.owned && it.category === categories[garageScroll]);
-  const gItemW = 72, gItemH = 76, gGap = 6;
-  const gMaxItems = Math.floor((W - 80) / (gItemW + gGap));
-  const visible = Math.min(ownedItems.length, gMaxItems);
-  const gStartX = W / 2 - (visible * (gItemW + gGap) - gGap) / 2;
-  for (let i = 0; i < visible; i++) {
-    const gx = gStartX + i * (gItemW + gGap);
-    if (pointInRect(px, py, { x: gx, y: garageY + 44, w: gItemW, h: gItemH })) return { kind: "garageItem", id: ownedItems[i].id };
+    const row = Math.floor(i / itemsPerRow);
+    const col = i % itemsPerRow;
+    const colsThisRow = Math.min(itemsPerRow, catItems.length - row * itemsPerRow);
+    const rowTotalW = colsThisRow * itemW + (colsThisRow - 1) * itemGap;
+    const rowStartX = W / 2 - rowTotalW / 2;
+    const ix = rowStartX + col * (itemW + itemGap);
+    const iy = itemY + row * (itemH + itemRowGap);
+    if (pointInRect(px, py, { x: ix, y: iy, w: itemW, h: itemH })) return { kind: "shopItem", id: catItems[i].id };
   }
   // "How to Play" tappable region — matches the bold hint at hintBaseY + 32
-  const helpCenterY = garageY + garageH + 28 + 32;
+  const helpCenterY = shopY + shopH + 28 + 32;
   if (pointInRect(px, py, { x: W / 2 - 160, y: helpCenterY - 22, w: 320, h: 40 })) return { kind: "help" };
   return null;
 }
@@ -662,6 +672,22 @@ function equipItem(item) {
 function handleTap(px, py) {
   // Portrait-only — swallow taps while the rotate prompt is up.
   if (canvas.width > canvas.height) return true;
+  // Return-to-menu confirmation takes precedence over everything else in-game.
+  if (confirmExit) {
+    const hit = confirmExitHit(px, py);
+    if (hit === "yes") {
+      confirmExit = false;
+      showingTitleScreen = true;
+      won = false; gameOver = false; resetting = false; paused = false;
+      obstacles.length = 0;
+      explosionParticles.length = 0;
+      damagePopups.length = 0;
+      crashMessage = null;
+    } else if (hit === "no") {
+      confirmExit = false;
+    }
+    return true;
+  }
   if (showHelp) {
     showHelp = false;
     return true;
@@ -722,22 +748,6 @@ function handleTap(px, py) {
       }
       return true;
     }
-    if (hit.kind === "garageTab") {
-      garageScroll = hit.value;
-      focusTarget = 3;
-      const owned = shopItems.filter(it => it.category === categories[garageScroll] && it.owned);
-      if (owned.length > 0) garageCursor = owned[0].id;
-      return true;
-    }
-    if (hit.kind === "garageItem") {
-      const item = getShopItem(hit.id);
-      garageCursor = item.id;
-      focusTarget = 4;
-      equipItem(item);
-      shopScroll = categories.indexOf(item.category);
-      shopCursor = item.id;
-      return true;
-    }
     if (hit.kind === "help") {
       showHelp = true;
       return true;
@@ -762,12 +772,7 @@ function handleTap(px, py) {
     return true;
   }
   if (hudHit === "menu") {
-    showingTitleScreen = true;
-    won = false; gameOver = false; resetting = false; paused = false;
-    obstacles.length = 0;
-    explosionParticles.length = 0;
-    damagePopups.length = 0;
-    crashMessage = null;
+    confirmExit = true;
     return true;
   }
   if (paused) {
@@ -917,6 +922,7 @@ function triggerCrash(obs) {
 
 // Update movement
 function update() {
+  if (confirmExit) return; // freeze the game while the return-to-menu prompt is up
   car.dx = 0;
   car.dy = 0;
 
@@ -1058,25 +1064,53 @@ function update() {
     }
   }
 
-  // Spawn new vehicle obstacles from the top (max 20 vehicles).
-  // Per-device tuning for the harder levels (Racer / Pro / Impossible):
-  // phones get fewer cars so the narrow road stays playable, tablets get
-  // more traffic to better fill their larger road.
+  // Spawn new vehicle obstacles from the top.
+  //  - A cooldown counter (with jittered reset) staggers spawn timing so cars
+  //    don't appear bunched up frame-after-frame.
+  //  - Before spawning, we count which lanes are already occupied in the
+  //    top spawn band; if 4 or more lanes are full we skip the spawn entirely
+  //    so the player always has at least one open lane to drive through
+  //    (i.e., never 5 cars across the same row).
   const lc = getLevelConfig();
   const effectiveSpawnRate = lc.spawnRate * getDeviceSpawnMultiplier(currentLevel);
   const vehicleCount = obstacles.filter(o => ["car", "truck", "police", "ambulance", "ufo"].includes(o.type)).length;
-  if (vehicleCount < lc.maxVehicles && Math.random() < effectiveSpawnRate) {
-    let tries = 0;
-    let o;
-    do {
-      o = randomObstacle();
-      tries++;
-    } while (tries < 10 && obstacles.some(ex => 
-      o.x < ex.x + ex.width && o.x + o.width > ex.x &&
-      o.y < ex.y + ex.height && o.y + o.height > ex.y
-    ));
-    stats[o.type].appeared++;
-    obstacles.push(o);
+  if (spawnCooldown > 0) spawnCooldown--;
+  if (spawnCooldown <= 0 && vehicleCount < lc.maxVehicles && Math.random() < effectiveSpawnRate) {
+    // Which lanes already have a vehicle near the top of the road?
+    const vehTypes = ["car", "truck", "police", "ambulance", "ufo"];
+    const bandTop = track.y;
+    const bandBot = track.y + 180; // ~2 car lengths
+    const occupiedLanes = new Set();
+    for (const ex of obstacles) {
+      if (!vehTypes.includes(ex.type)) continue;
+      if (ex.y < bandBot && ex.y + ex.height > bandTop) occupiedLanes.add(ex.lane);
+    }
+    // If 4+ lanes are occupied at the top, adding one more would close the
+    // road; skip this spawn and wait until traffic clears.
+    if (occupiedLanes.size < 4) {
+      const freeLanes = [];
+      for (let l = 0; l < numLanes; l++) if (!occupiedLanes.has(l)) freeLanes.push(l);
+      // Prefer a free lane (no overlap risk); fall back to fully random if
+      // somehow none qualified (shouldn't happen with the guard above).
+      const chosenLane = freeLanes.length > 0
+        ? freeLanes[Math.floor(Math.random() * freeLanes.length)]
+        : Math.floor(Math.random() * numLanes);
+      let tries = 0;
+      let o;
+      do {
+        o = randomObstacle(undefined, chosenLane);
+        tries++;
+      } while (tries < 6 && obstacles.some(ex =>
+        o.x < ex.x + ex.width && o.x + o.width > ex.x &&
+        o.y < ex.y + ex.height && o.y + o.height > ex.y
+      ));
+      stats[o.type].appeared++;
+      obstacles.push(o);
+      // Stagger the next spawn — jittered cooldown so timing isn't uniform.
+      // Higher levels = shorter min gap so traffic still feels intense.
+      const baseGap = Math.max(10, 38 - currentLevel * 5);
+      spawnCooldown = baseGap + Math.floor(Math.random() * baseGap);
+    }
   }
 
   // Spawn pedestrians from the left
@@ -2093,76 +2127,148 @@ function drawLevelSelect() {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Title
-  ctx.shadowColor = "rgba(255,107,53,0.4)";
-  ctx.shadowBlur = 20;
+  const phone = isPhoneLayout();
+  const tokenRewards = [0, 2, 4, 5, 6, 8];
+
+  // Title block \u2014 slightly tighter on phone-aspect screens to make room for
+  // the vertically stacked level buttons.
+  const titleY = phone ? 44 : 100;
+  const subY   = phone ? 72 : 138;
+  const tokY   = phone ? 96 : 166;
+  ctx.shadowColor = "rgba(255,107,53,0.5)";
+  ctx.shadowBlur = 26;
   ctx.fillStyle = "#f7c948";
-  ctx.font = "bold 42px 'Segoe UI', Arial";
+  ctx.font = phone ? "bold 52px 'Segoe UI', Arial" : "bold 64px 'Segoe UI', Arial";
   ctx.textAlign = "center";
-  ctx.fillText("ROAD RACER", W / 2, 100);
+  ctx.fillText("ROAD RACER", W / 2, titleY);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "16px 'Segoe UI', Arial";
-  ctx.fillText("Select Difficulty", W / 2, 140);
+  ctx.font = phone ? "14px 'Segoe UI', Arial" : "16px 'Segoe UI', Arial";
+  ctx.fillText("Select Difficulty", W / 2, subY);
 
-  // Tokens display
   ctx.fillStyle = "#f7c948";
-  ctx.font = "bold 18px 'Segoe UI', Arial";
-  ctx.fillText("\u2B50 Tokens: " + tokens, W / 2, 170);
+  ctx.font = phone ? "bold 16px 'Segoe UI', Arial" : "bold 18px 'Segoe UI', Arial";
+  ctx.fillText("\u2B50 Tokens: " + tokens, W / 2, tokY);
 
-  // Level buttons
-  const btnW = 140, btnH = 180, gap = 15;
-  const totalW = 5 * btnW + 4 * gap;
-  const startX = (W - totalW) / 2;
-  const btnY = 180;
+  // Level buttons \u2014 two layouts:
+  //   \u2022 phone-aspect: vertical stack (narrow + tall)
+  //   \u2022 tablet/desktop: horizontal row of 5 (original layout)
+  let shopY;
+  if (phone) {
+    const btnW = 400, btnH = 138, btnGap = 12;
+    const btnX = (W - btnW) / 2;
+    const btnY = 130;
 
-  for (let i = 1; i <= 5; i++) {
-    const lc = levelConfig[i];
-    const bx = startX + (i - 1) * (btnW + gap);
+    for (let i = 1; i <= 5; i++) {
+      const lc = levelConfig[i];
+      const by = btnY + (i - 1) * (btnH + btnGap);
+      const isSelected = i === selectedLevel;
 
-    // Button background
-    const isSelected = i === selectedLevel;
-    const btnGrad = ctx.createLinearGradient(bx, btnY, bx, btnY + btnH);
-    btnGrad.addColorStop(0, isSelected ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)");
-    btnGrad.addColorStop(1, isSelected ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)");
-    ctx.fillStyle = btnGrad;
-    ctx.beginPath();
-    ctx.roundRect(bx, btnY, btnW, btnH, 10);
-    ctx.fill();
+      const btnGrad = ctx.createLinearGradient(btnX, by, btnX, by + btnH);
+      btnGrad.addColorStop(0, isSelected ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)");
+      btnGrad.addColorStop(1, isSelected ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)");
+      ctx.fillStyle = btnGrad;
+      ctx.beginPath();
+      ctx.roundRect(btnX, by, btnW, btnH, 12);
+      ctx.fill();
 
-    // Border
-    ctx.strokeStyle = (isSelected && focusTarget === 0) ? "#f7c948" : isSelected ? lc.color + "aa" : lc.color + "66";
-    ctx.lineWidth = (isSelected && focusTarget === 0) ? 3 : 2;
-    ctx.beginPath();
-    ctx.roundRect(bx, btnY, btnW, btnH, 10);
-    ctx.stroke();
+      ctx.strokeStyle = (isSelected && focusTarget === 0) ? "#f7c948" : isSelected ? lc.color + "aa" : lc.color + "66";
+      ctx.lineWidth = (isSelected && focusTarget === 0) ? 3 : 2;
+      ctx.beginPath();
+      ctx.roundRect(btnX, by, btnW, btnH, 12);
+      ctx.stroke();
 
-    // Level number
-    ctx.fillStyle = lc.color;
-    ctx.font = "bold 48px 'Segoe UI', Arial";
-    ctx.fillText(i, bx + btnW / 2, btnY + 55);
+      // Level number (left)
+      ctx.fillStyle = lc.color;
+      ctx.font = "bold 68px 'Segoe UI', Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(i, btnX + 50, by + 88);
 
-    // Level name
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 16px 'Segoe UI', Arial";
-    ctx.fillText(lc.name, bx + btnW / 2, btnY + 82);
+      // Level name (top, beside number)
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 30px 'Segoe UI', Arial";
+      ctx.textAlign = "left";
+      ctx.fillText(lc.name, btnX + 100, by + 48);
 
-    // Stats
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.font = "11px 'Segoe UI', Arial";
-    ctx.fillText("Speed: " + (lc.obstacleSpeed * 100).toFixed(0) + "%", bx + btnW / 2, btnY + 108);
-    ctx.fillText("Traffic: " + lc.maxVehicles, bx + btnW / 2, btnY + 124);
-    ctx.fillText("Spawn: " + (lc.spawnRate * 1000).toFixed(0) + "x", bx + btnW / 2, btnY + 140);
-    const tokenRewards = [0, 2, 4, 5, 6, 8];
-    ctx.fillStyle = "#f7c948";
-    ctx.fillText("\u2B50 +" + tokenRewards[i] + " tokens", bx + btnW / 2, btnY + 155);
+      // Token reward (top right)
+      ctx.fillStyle = "#f7c948";
+      ctx.font = "bold 15px 'Segoe UI', Arial";
+      ctx.textAlign = "right";
+      ctx.fillText("\u2B50 +" + tokenRewards[i] + " tokens", btnX + btnW - 16, by + 36);
 
+      // Stats row (bottom)
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = "14px 'Segoe UI', Arial";
+      ctx.textAlign = "left";
+      ctx.fillText("Speed: " + (lc.obstacleSpeed * 100).toFixed(0) + "%", btnX + 100, by + 108);
+      ctx.fillText("Traffic: " + lc.maxVehicles, btnX + 230, by + 108);
+      ctx.fillText("Spawn: " + (lc.spawnRate * 1000).toFixed(0) + "x", btnX + 320, by + 108);
+    }
+    shopY = btnY + 5 * btnH + 4 * btnGap + 28;
+  } else {
+    // iPad/tablet vs full desktop \u2014 tablets get slimmer buttons and smaller text.
+    const tablet = isTabletLayout();
+    const btnW = tablet ? 140 : 170;
+    const btnH = tablet ? 195 : 240;
+    const gap  = tablet ? 12 : 4;
+    const startX = (W - (5 * btnW + 4 * gap)) / 2;
+    const btnY = 185;
+
+    // Per-tier inner-content metrics so labels stay readable inside the card.
+    const numberFont = tablet ? 54 : 68;
+    const numberY    = tablet ? 64 : 78;
+    const nameFont   = tablet ? 18 : 22;
+    const nameY      = tablet ? 96 : 115;
+    const statFont   = tablet ? 12 : 14;
+    const statY1     = tablet ? 125 : 150;
+    const statY2     = tablet ? 144 : 172;
+    const statY3     = tablet ? 163 : 194;
+    const rewardY    = tablet ? 184 : 222;
+
+    for (let i = 1; i <= 5; i++) {
+      const lc = levelConfig[i];
+      const bx = startX + (i - 1) * (btnW + gap);
+      const isSelected = i === selectedLevel;
+
+      const btnGrad = ctx.createLinearGradient(bx, btnY, bx, btnY + btnH);
+      btnGrad.addColorStop(0, isSelected ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)");
+      btnGrad.addColorStop(1, isSelected ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)");
+      ctx.fillStyle = btnGrad;
+      ctx.beginPath();
+      ctx.roundRect(bx, btnY, btnW, btnH, 12);
+      ctx.fill();
+
+      ctx.strokeStyle = (isSelected && focusTarget === 0) ? "#f7c948" : isSelected ? lc.color + "aa" : lc.color + "66";
+      ctx.lineWidth = (isSelected && focusTarget === 0) ? 3 : 2;
+      ctx.beginPath();
+      ctx.roundRect(bx, btnY, btnW, btnH, 12);
+      ctx.stroke();
+
+      ctx.fillStyle = lc.color;
+      ctx.font = "bold " + numberFont + "px 'Segoe UI', Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(i, bx + btnW / 2, btnY + numberY);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold " + nameFont + "px 'Segoe UI', Arial";
+      ctx.fillText(lc.name, bx + btnW / 2, btnY + nameY);
+
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = statFont + "px 'Segoe UI', Arial";
+      ctx.fillText("Speed: " + (lc.obstacleSpeed * 100).toFixed(0) + "%", bx + btnW / 2, btnY + statY1);
+      ctx.fillText("Traffic: " + lc.maxVehicles, bx + btnW / 2, btnY + statY2);
+      ctx.fillText("Spawn: " + (lc.spawnRate * 1000).toFixed(0) + "x", bx + btnW / 2, btnY + statY3);
+      ctx.fillStyle = "#f7c948";
+      ctx.font = "bold " + statFont + "px 'Segoe UI', Arial";
+      ctx.fillText("\u2B50 +" + tokenRewards[i] + " tokens", bx + btnW / 2, btnY + rewardY);
+    }
+    shopY = btnY + btnH + 30;
   }
+  ctx.textAlign = "center";
 
-  // --- SHOP SECTION ---
-  const shopY = btnY + btnH + 30;
-  const shopH = 160;
+  // --- SHOP SECTION --- bigger panel + larger item tiles, grid of up to 4 per row
+  const shopH = 260;
 
   // Shop panel background
   ctx.fillStyle = "rgba(0,0,0,0.35)";
@@ -2180,13 +2286,13 @@ function drawLevelSelect() {
 
   // Shop title
   ctx.fillStyle = "#f7c948";
-  ctx.font = "bold 16px 'Segoe UI', Arial";
-  ctx.fillText("\u2B50 SHOP", W / 2, shopY + 20);
+  ctx.font = "bold 20px 'Segoe UI', Arial";
+  ctx.fillText("\u2B50 SHOP", W / 2, shopY + 22);
 
-  // Category tabs
+  // Category tabs — wider + slightly taller to match the bigger panel
   const categories = ["color", "glow", "speed", "headlight"];
   const catLabels = ["CAR COLOUR", "GLOW EFFECT", "CAR SPEED", "HEADLIGHTS"];
-  const tabW = 110;
+  const tabW = 130;
   const tabStartX = W / 2 - (4 * tabW + 30) / 2;
 
   for (let i = 0; i < 4; i++) {
@@ -2194,37 +2300,43 @@ function drawLevelSelect() {
     const active = shopScroll === i;
     ctx.fillStyle = active ? "rgba(247,201,72,0.2)" : "rgba(255,255,255,0.05)";
     ctx.beginPath();
-    ctx.roundRect(tx, shopY + 30, tabW, 24, 5);
+    ctx.roundRect(tx, shopY + 30, tabW, 28, 5);
     ctx.fill();
     ctx.strokeStyle = (active && focusTarget === 1) ? "#f7c948" : active ? "rgba(247,201,72,0.5)" : "rgba(255,255,255,0.1)";
     ctx.lineWidth = (active && focusTarget === 1) ? 2 : 1;
     ctx.beginPath();
-    ctx.roundRect(tx, shopY + 30, tabW, 24, 5);
+    ctx.roundRect(tx, shopY + 30, tabW, 28, 5);
     ctx.stroke();
     ctx.fillStyle = active ? "#f7c948" : "rgba(255,255,255,0.5)";
-    ctx.font = "bold 11px 'Segoe UI', Arial";
-    ctx.fillText(catLabels[i], tx + tabW / 2, shopY + 46);
+    ctx.font = "bold 13px 'Segoe UI', Arial";
+    ctx.fillText(catLabels[i], tx + tabW / 2, shopY + 49);
   }
 
-  // Category items
+  // Category items — bigger tiles, grid of up to 4 per row
   const category = categories[shopScroll];
   const catItems = shopItems.filter(i => i.category === category);
   const selectedId = shopCursor;
-  const itemW = 80, itemH = 65;
-  const itemGap = 8;
-  const totalItemW = catItems.length * itemW + (catItems.length - 1) * itemGap;
-  const itemStartX = W / 2 - totalItemW / 2;
-  const itemY = shopY + 62;
+  const itemW = 104, itemH = 86;
+  const itemGap = 10;
+  const itemRowGap = 10;
+  const itemsPerRow = 4;
+  const itemY = shopY + 72;
 
   for (let i = 0; i < catItems.length; i++) {
     const item = catItems[i];
-    const ix = itemStartX + i * (itemW + itemGap);
+    const row = Math.floor(i / itemsPerRow);
+    const col = i % itemsPerRow;
+    const colsThisRow = Math.min(itemsPerRow, catItems.length - row * itemsPerRow);
+    const rowTotalW = colsThisRow * itemW + (colsThisRow - 1) * itemGap;
+    const rowStartX = W / 2 - rowTotalW / 2;
+    const ix = rowStartX + col * (itemW + itemGap);
+    const iy = itemY + row * (itemH + itemRowGap);
     const isSelected = item.id === selectedId;
 
     // Item box
     ctx.fillStyle = isSelected ? "rgba(247,201,72,0.15)" : "rgba(255,255,255,0.04)";
     ctx.beginPath();
-    ctx.roundRect(ix, itemY, itemW, itemH, 6);
+    ctx.roundRect(ix, iy, itemW, itemH, 6);
     ctx.fill();
     let borderColor;
     if (isSelected && itemFocused) {
@@ -2239,82 +2351,82 @@ function drawLevelSelect() {
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = (isSelected && itemFocused) ? 2 : 1;
     ctx.beginPath();
-    ctx.roundRect(ix, itemY, itemW, itemH, 6);
+    ctx.roundRect(ix, iy, itemW, itemH, 6);
     ctx.stroke();
 
-    // Color/glow preview
+    // Color/glow preview — sized for the bigger tile
     if (category === "color") {
       ctx.fillStyle = item.value;
       ctx.beginPath();
-      ctx.roundRect(ix + itemW / 2 - 10, itemY + 6, 20, 14, 3);
+      ctx.roundRect(ix + itemW / 2 - 14, iy + 10, 28, 18, 4);
       ctx.fill();
     } else if (category === "glow") {
       if (item.value === "none") {
         ctx.strokeStyle = "#555";
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(ix + itemW / 2, itemY + 13, 7, 0, Math.PI * 2);
+        ctx.arc(ix + itemW / 2, iy + 20, 10, 0, Math.PI * 2);
         ctx.stroke();
       } else if (item.value === "rainbow") {
-        const rg = ctx.createLinearGradient(ix + itemW / 2 - 8, 0, ix + itemW / 2 + 8, 0);
+        const rg = ctx.createLinearGradient(ix + itemW / 2 - 10, 0, ix + itemW / 2 + 10, 0);
         rg.addColorStop(0, "red"); rg.addColorStop(0.33, "yellow"); rg.addColorStop(0.66, "cyan"); rg.addColorStop(1, "magenta");
         ctx.fillStyle = rg;
         ctx.beginPath();
-        ctx.arc(ix + itemW / 2, itemY + 13, 7, 0, Math.PI * 2);
+        ctx.arc(ix + itemW / 2, iy + 20, 10, 0, Math.PI * 2);
         ctx.fill();
       } else {
         ctx.shadowColor = item.value;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 12;
         ctx.fillStyle = item.value;
         ctx.beginPath();
-        ctx.arc(ix + itemW / 2, itemY + 13, 7, 0, Math.PI * 2);
+        ctx.arc(ix + itemW / 2, iy + 20, 10, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
       }
     } else if (category === "headlight") {
       if (item.value === "rainbow") {
-        const rg = ctx.createLinearGradient(ix + itemW / 2 - 8, 0, ix + itemW / 2 + 8, 0);
+        const rg = ctx.createLinearGradient(ix + itemW / 2 - 10, 0, ix + itemW / 2 + 10, 0);
         rg.addColorStop(0, "red"); rg.addColorStop(0.33, "yellow"); rg.addColorStop(0.66, "cyan"); rg.addColorStop(1, "magenta");
         ctx.fillStyle = rg;
       } else {
         ctx.fillStyle = item.value;
       }
       ctx.shadowColor = item.value === "rainbow" ? "#fff" : item.value;
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(ix + itemW / 2 - 6, itemY + 13, 4, 0, Math.PI * 2);
+      ctx.arc(ix + itemW / 2 - 8, iy + 20, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(ix + itemW / 2 + 6, itemY + 13, 4, 0, Math.PI * 2);
+      ctx.arc(ix + itemW / 2 + 8, iy + 20, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
     } else {
       ctx.fillStyle = "#fff";
-      ctx.font = "bold 14px 'Segoe UI', Arial";
-      ctx.fillText(item.value, ix + itemW / 2, itemY + 18);
+      ctx.font = "bold 20px 'Segoe UI', Arial";
+      ctx.fillText(item.value, ix + itemW / 2, iy + 28);
     }
 
     // Label
     ctx.fillStyle = item.owned ? "#fff" : "#888";
-    ctx.font = "11px 'Segoe UI', Arial";
-    ctx.fillText(item.label, ix + itemW / 2, itemY + 36);
+    ctx.font = "bold 14px 'Segoe UI', Arial";
+    ctx.fillText(item.label, ix + itemW / 2, iy + 52);
 
     // Status
     if (!item.owned) {
       ctx.fillStyle = tokens >= item.cost ? "#f7c948" : "#ff5555";
-      ctx.font = "bold 10px 'Segoe UI', Arial";
-      ctx.fillText("\u2B50 " + item.cost, ix + itemW / 2, itemY + 50);
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
-      ctx.font = "9px 'Segoe UI', Arial";
-      ctx.fillText("B to buy", ix + itemW / 2, itemY + 60);
+      ctx.font = "bold 13px 'Segoe UI', Arial";
+      ctx.fillText("\u2B50 " + item.cost, ix + itemW / 2, iy + 70);
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.font = "10px 'Segoe UI', Arial";
+      ctx.fillText("Tap to buy", ix + itemW / 2, iy + 81);
     } else if (isSelected) {
       ctx.fillStyle = "#44ff66";
-      ctx.font = "bold 10px 'Segoe UI', Arial";
-      ctx.fillText("\u2713 EQUIPPED", ix + itemW / 2, itemY + 52);
+      ctx.font = "bold 12px 'Segoe UI', Arial";
+      ctx.fillText("\u2713 EQUIPPED", ix + itemW / 2, iy + 72);
     } else {
       ctx.fillStyle = "rgba(255,255,255,0.3)";
-      ctx.font = "10px 'Segoe UI', Arial";
-      ctx.fillText("OWNED", ix + itemW / 2, itemY + 52);
+      ctx.font = "12px 'Segoe UI', Arial";
+      ctx.fillText("OWNED", ix + itemW / 2, iy + 72);
     }
   }
 
@@ -2347,120 +2459,12 @@ function drawLevelSelect() {
     ctx.fill();
   }
 
-  const hintY = shopY + shopH - 8;
-  const lx = W / 2 - 240;
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.font = "11px 'Segoe UI', Arial";
-  ctx.textAlign = "left";
-
-  // Up/Down arrows
-  drawHintArrow(lx + 18, hintY - 2, "up", 4);
-  drawHintArrow(lx + 18, hintY + 8, "down", 4);
-  ctx.fillText("= Switch row", lx + 28, hintY + 4);
-
-  // Left/Right arrows
-  drawHintArrow(lx + 115, hintY + 2, "left", 4);
-  drawHintArrow(lx + 128, hintY + 2, "right", 4);
-  ctx.fillText("= Select   |   B = Buy   |   Enter = Start", lx + 138, hintY + 4);
-
-  // Controls hint
-  // --- GARAGE SECTION ---
-  const garageY = shopY + shopH + 14;
-  const garageH = 160;
-
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
-  ctx.beginPath();
-  ctx.roundRect(20, garageY, W - 40, garageH, 10);
-  ctx.fill();
-  ctx.strokeStyle = (focusTarget === 3 || focusTarget === 4) ? "#f7c948" : "rgba(247,201,72,0.3)";
-  ctx.lineWidth = (focusTarget === 3 || focusTarget === 4) ? 2 : 1;
-  ctx.beginPath();
-  ctx.roundRect(20, garageY, W - 40, garageH, 10);
-  ctx.stroke();
-
-  // Garage title
-  ctx.fillStyle = "#f7c948";
-  ctx.font = "bold 13px 'Segoe UI', Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("GARAGE", W / 2, garageY + 14);
-
-  // Garage category tabs
-  const gCats = ["color", "glow", "speed", "headlight"];
-  const gCatLabels = ["CAR COLOUR", "GLOW EFFECT", "CAR SPEED", "HEADLIGHTS"];
-  const gTabW = 105;
-  const gTabStartX = W / 2 - (4 * gTabW + 24) / 2;
-  for (let gi = 0; gi < 4; gi++) {
-    const gtx = gTabStartX + gi * (gTabW + 8);
-    const active = garageScroll === gi;
-    ctx.fillStyle = active ? "rgba(247,201,72,0.2)" : "rgba(255,255,255,0.05)";
-    ctx.beginPath();
-    ctx.roundRect(gtx, garageY + 18, gTabW, 20, 4);
-    ctx.fill();
-    ctx.strokeStyle = (active && focusTarget === 3) ? "#f7c948" : active ? "rgba(247,201,72,0.4)" : "rgba(255,255,255,0.1)";
-    ctx.lineWidth = (active && focusTarget === 3) ? 2 : 1;
-    ctx.beginPath();
-    ctx.roundRect(gtx, garageY + 18, gTabW, 20, 4);
-    ctx.stroke();
-    ctx.fillStyle = active ? "#f7c948" : "rgba(255,255,255,0.5)";
-    ctx.font = "bold 9px 'Segoe UI', Arial";
-    ctx.fillText(gCatLabels[gi], gtx + gTabW / 2, garageY + 32);
-  }
-
-  // Show owned items filtered by current garage category
-  const ownedItems = shopItems.filter(i => i.owned && i.category === gCats[garageScroll]);
-  const gItemW = 72, gItemH = 76;
-  const gGap = 6;
-  const gMaxItems = Math.floor((W - 80) / (gItemW + gGap));
-  const gStartX = W / 2 - (Math.min(ownedItems.length, gMaxItems) * (gItemW + gGap) - gGap) / 2;
-
-  for (let gi = 0; gi < Math.min(ownedItems.length, gMaxItems); gi++) {
-    const item = ownedItems[gi];
-    const gx = gStartX + gi * (gItemW + gGap);
-    const isGSelected = item.id === garageCursor && focusTarget === 4;
-
-    ctx.fillStyle = isGSelected ? "rgba(247,201,72,0.2)" : "rgba(255,255,255,0.05)";
-    ctx.beginPath();
-    ctx.roundRect(gx, garageY + 44, gItemW, gItemH, 4);
-    ctx.fill();
-    ctx.strokeStyle = isGSelected ? "#f7c948" : "rgba(255,255,255,0.1)";
-    ctx.lineWidth = isGSelected ? 2 : 1;
-    ctx.beginPath();
-    ctx.roundRect(gx, garageY + 44, gItemW, gItemH, 4);
-    ctx.stroke();
-
-    // Color preview
-    if (item.category === "color") {
-      ctx.fillStyle = item.value;
-      ctx.fillRect(gx + gItemW/2 - 12, garageY + 50, 24, 12);
-    } else if (item.category === "glow") {
-      ctx.fillStyle = item.value === "rainbow" ? "#f7c948" : item.value;
-      ctx.beginPath();
-      ctx.arc(gx + gItemW/2, garageY + 58, 8, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (item.category === "speed") {
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 16px 'Segoe UI', Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(item.value, gx + gItemW/2, garageY + 64);
-    } else {
-      ctx.fillStyle = item.value === "rainbow" ? "#f7c948" : item.value;
-      ctx.beginPath();
-      ctx.arc(gx + 14, garageY + 58, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(gx + gItemW - 14, garageY + 58, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Label (bigger and brighter so it stays readable when scaled to mobile)
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 14px 'Segoe UI', Arial";
-    ctx.fillText(item.label, gx + gItemW/2, garageY + 105);
-  }
+  // (Keyboard hint row inside the shop was removed — the shop is now
+  // slimmer to give the level buttons more vertical room.)
 
   // Start new section for controls hints
   ctx.textAlign = "start";
-  const hintBaseY = garageY + garageH + 28;
+  const hintBaseY = shopY + shopH + 28;
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = "16px 'Segoe UI', Arial";
   ctx.textAlign = "center";
@@ -2736,9 +2740,11 @@ function gameLoop() {
   ctx.textAlign = "start";
   drawInGameButtons();
 
-  // Token bar (under the level label, slightly inside the road)
+  // Token bar and timer — placed below the obstacle counters panel.
+  // Counter panel bottom sits at y=138 (after closing the menu→counter gap),
+  // so tokenY=146 leaves a small gap below it.
   const tokenX = Math.max(8, track.x + 4);
-  const tokenY = 50;
+  const tokenY = 146;
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.beginPath();
   ctx.roundRect(tokenX, tokenY, 72, 28, 6);
@@ -2790,16 +2796,16 @@ function gameLoop() {
   }
   ctx.globalAlpha = 1;
 
-  // Bottom HUD strip — translucent backdrop so blood bar and counters
-  // stay readable when the road runs the full length of the screen.
+  // Top HUD backdrop — flush against the menu strip (which ends at y=46),
+  // covering the blood bar and obstacle counters as a single contiguous block.
   ctx.fillStyle = "rgba(0,0,0,0.45)";
-  ctx.fillRect(0, canvas.height - 96, canvas.width, 96);
+  ctx.fillRect(0, 46, canvas.width, 92);
 
-  // Draw blood indicator near the bottom of the viewport
+  // Draw blood indicator at the top of the viewport, directly below the menu row
   const barW = 260;
   const barH = 22;
   const barX = (canvas.width - barW) / 2;
-  const barY = canvas.height - 90;
+  const barY = 52;
 
   // Bar shadow
   ctx.fillStyle = "rgba(0,0,0,0.4)";
@@ -2858,7 +2864,8 @@ function gameLoop() {
   ctx.fillText(blood + "%", canvas.width / 2, barY + 16);
   ctx.textAlign = "start";
 
-  // Draw obstacle counters panel
+  // Draw obstacle counters panel — anchored just below the blood bar so
+  // both HUD elements sit together at the top of the viewport.
   const counterY = barY + 50;
   const colW = canvas.width / allTypes.length;
   const panelH = 58;
@@ -3097,7 +3104,55 @@ function gameLoop() {
     ctx.fillText(msg, bx, by);
   }
 
+  // Return-to-menu confirmation overlay — drawn last so it sits above everything.
+  if (confirmExit) drawConfirmExit();
+
   requestAnimationFrame(gameLoop);
+}
+
+function drawConfirmExit() {
+  ctx.fillStyle = "rgba(0,0,0,0.75)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const l = confirmExitLayout();
+  const { x: mx, y: my, w: mw, h: mh } = l.box;
+
+  ctx.fillStyle = "rgba(20,25,50,0.97)";
+  ctx.beginPath();
+  ctx.roundRect(mx, my, mw, mh, 12);
+  ctx.fill();
+  ctx.strokeStyle = "#f7c948";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(mx, my, mw, mh, 12);
+  ctx.stroke();
+
+  ctx.fillStyle = "#f7c948";
+  ctx.font = "bold 20px 'Segoe UI', Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("Return to menu?", mx + mw / 2, my + 42);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "14px 'Segoe UI', Arial";
+  ctx.fillText("Your current run will be lost.", mx + mw / 2, my + 72);
+
+  // Yes button
+  ctx.fillStyle = "#44cc66";
+  ctx.beginPath();
+  ctx.roundRect(l.yes.x, l.yes.y, l.yes.w, l.yes.h, 6);
+  ctx.fill();
+  ctx.fillStyle = "#000";
+  ctx.font = "bold 14px 'Segoe UI', Arial";
+  ctx.fillText("YES (Y)", l.yes.x + l.yes.w / 2, l.yes.y + l.yes.h / 2 + 5);
+
+  // No button
+  ctx.fillStyle = "#ff5555";
+  ctx.beginPath();
+  ctx.roundRect(l.no.x, l.no.y, l.no.w, l.no.h, 6);
+  ctx.fill();
+  ctx.fillStyle = "#000";
+  ctx.fillText("NO (N)", l.no.x + l.no.w / 2, l.no.y + l.no.h / 2 + 5);
+
+  ctx.textAlign = "start";
 }
 
 gameLoop();
